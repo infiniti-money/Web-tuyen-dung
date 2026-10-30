@@ -138,3 +138,40 @@ using(bucket_id='candidate-cvs' and (
 -- drop trigger protect_role on public.profiles;
 -- update public.profiles set role='admin' where id='<verified-user-uuid>';
 -- create trigger protect_role before update on public.profiles for each row execute function public.guard_profile_role();
+
+-- Additional integrity guards: immutable owners, immutable application linkage,
+-- reviewed records cannot be silently rewritten after approval.
+create or replace function public.guard_company_ownership() returns trigger language plpgsql as $$
+begin
+ if new.owner_id is distinct from old.owner_id then raise exception 'Company owner is immutable'; end if;
+ if old.status='approved' and not public.is_admin() and
+  (new.name is distinct from old.name or new.description is distinct from old.description or new.location is distinct from old.location)
+ then raise exception 'Approved company details require administrator review'; end if;
+ return new;
+end;$$;
+drop trigger if exists protect_company_ownership on public.companies;
+create trigger protect_company_ownership before update on public.companies
+for each row execute function public.guard_company_ownership();
+create or replace function public.guard_job_content() returns trigger language plpgsql as $$
+begin
+ if new.company_id is distinct from old.company_id then raise exception 'Company cannot change'; end if;
+ if not public.is_admin() and old.status in ('published','closed','rejected') and
+ (new.title,new.description,new.requirements,new.location,new.industry,new.salary_min,new.salary_max)
+ is distinct from
+ (old.title,old.description,old.requirements,old.location,old.industry,old.salary_min,old.salary_max)
+ then raise exception 'Reviewed job cannot be edited without new moderation'; end if;
+ return new;
+end;$$;
+drop trigger if exists protect_job_content on public.jobs;
+create trigger protect_job_content before update on public.jobs for each row execute function public.guard_job_content();
+create or replace function public.guard_application_fields() returns trigger language plpgsql as $$
+begin
+ if new.job_id is distinct from old.job_id or new.candidate_id is distinct from old.candidate_id
+ or new.cover_letter is distinct from old.cover_letter or new.cv_path is distinct from old.cv_path
+ then raise exception 'Application contents are immutable'; end if;
+ return new;
+end;$$;
+drop trigger if exists protect_application_fields on public.applications;
+create trigger protect_application_fields before update on public.applications for each row execute function public.guard_application_fields();
+-- Explicitly limit employer updates to existing companies; even after permission
+-- errors, no public SELECT of pending company records belonging to other owners.
