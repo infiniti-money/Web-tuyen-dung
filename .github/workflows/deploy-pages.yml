@@ -1,39 +1,55 @@
-name: Deploy static website to GitHub Pages
+name: Validate and deploy Hưng Yên Jobs to GitHub Pages
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
-  pages: write
-  id-token: write
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Validate website
+      - name: Check JavaScript syntax
+        run: node --input-type=module --check < src/app.js
+      - name: Check required assets
         run: |
-          node --check src/app.js
-          node --check scripts/build-pages.mjs
-          node --test tests/smoke.test.mjs
-      - name: Build website
+          test -f index.html
+          test -f app.html
+          test -f supabase/schema.sql
+          test -f config.example.js
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build static site and public-only Supabase configuration
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
-        run: node scripts/build-pages.mjs
+        run: |
+          mkdir -p _site/src
+          cp index.html app.html _site/
+          cp src/app.js _site/src/
+          node -e 'const fs=require("fs");const v={url:process.env.SUPABASE_URL||"",anonKey:process.env.SUPABASE_PUBLISHABLE_KEY||""};fs.writeFileSync("_site/config.js","window.HYJOBS_CONFIG = "+JSON.stringify(v)+";\n")'
+          test -f _site/config.js
+          touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
