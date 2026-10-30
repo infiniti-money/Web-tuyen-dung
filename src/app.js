@@ -1,4 +1,4 @@
-import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.75.0';
 const cfg=window.HYJOBS_CONFIG||{},valid=/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.url||'')&&!String(cfg.anonKey||'').includes('YOUR_');
 const db=valid?createClient(cfg.url,cfg.anonKey):null;
 const root=document.querySelector('#root'), e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -32,3 +32,5 @@ root.querySelectorAll('[data-job]').forEach(b=>b.onclick=async()=>{try{await req
 document.querySelectorAll('[data-page]').forEach(a=>a.onclick=ev=>{ev.preventDefault();navigate(a.dataset.page)});
 q('#logoutBtn').onclick=async()=>{await db?.auth.signOut();note('Đã đăng xuất');navigate('jobs')};
 navigate('jobs');
+
+window.addEventListener('hashchange',()=>{const p=location.hash.slice(1);if(['jobs','dashboard','account'].includes(p))navigate(p)});
