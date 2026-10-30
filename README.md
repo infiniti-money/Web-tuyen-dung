@@ -1,39 +1,37 @@
-# Hưng Yên Jobs
+# Hưng Yên Jobs — Nền tảng tuyển dụng khu vực Hưng Yên
 
-Website tuyển dụng tập trung vào khu vực Hưng Yên, giao diện tiếng Việt, tương thích desktop và mobile.
+**Phiên bản:** v2 · Supabase PostgreSQL + Auth + Storage + Row Level Security  
+**Supabase project:** `hung-yen-jobs` · Singapore · `lxarzbxymgjomsztftqj`
 
-## Chạy thử
+## Giao diện
 
-Mở tệp `index.html` trực tiếp trên trình duyệt hoặc phục vụ qua web server tĩnh. Không yêu cầu cài đặt Node.js.
+- `index.html`: Trang giới thiệu và demo giao diện (các tin có sẵn đều là **minh họa**).
+- `app.html`: Hệ thống **dữ liệu thật**, dùng Supabase, dành cho ứng viên, nhà tuyển dụng và quản trị viên.
+- `src/app.js`: Xác thực, bảng điều khiển, đăng tin, kiểm duyệt và nộp CV.
+- `config.public.js`: Supabase Project URL và **publishable key** cho frontend (không chứa khóa bí mật).
+- `supabase/schema.sql`: Cơ sở dữ liệu và chính sách truy cập RLS.
+- `docs/DEPLOY.md`: Hướng dẫn xuất bản, quản trị và kiểm thử.
 
-## Chức năng bản demo v1.0
+## Chức năng chính
 
-- Tìm kiếm công việc theo từ khóa, khu vực, ngành nghề, mức lương.
-- Khám phá ngành nghề, tìm việc theo khu vực.
-- Lưu công việc yêu thích qua localStorage.
-- Xem chi tiết tin tuyển dụng.
-- Tạo tin tuyển dụng demo được lưu **chỉ trên thiết bị đang dùng** qua localStorage.
-- Giao diện responsive và điều hướng trên điện thoại.
+1. Đăng ký tài khoản bằng email, phân quyền ứng viên hoặc nhà tuyển dụng; vai trò admin chỉ do quản trị hệ thống cấp.
+2. Doanh nghiệp đăng ký và chờ phê duyệt.
+3. Đăng tin tuyển dụng, duyệt tin, xem danh sách việc làm đã xuất bản.
+4. Ứng viên nộp hồ sơ, có thể tải CV PDF lên kho lưu trữ **riêng tư**.
+5. Nhà tuyển dụng xem hồ sơ của công việc thuộc doanh nghiệp mình, quản lý tiến trình tuyển dụng.
+6. Bảo vệ truy cập bằng Supabase Auth và Row Level Security.
 
-## Giới hạn hiện tại
+## Trạng thái triển khai
 
-- Tất cả tin mặc định là **dữ liệu minh họa**, không có doanh nghiệp hay vị trí tuyển dụng nào được xác minh.
-- Chưa có backend, tài khoản, cơ sở dữ liệu, xác thực, kiểm duyệt hoặc nộp hồ sơ thật.
-- Tin được tạo trong trình duyệt không được đồng bộ giữa người dùng; không nhập thông tin cá nhân nhạy cảm.
-- Danh sách khu vực là nhãn tìm kiếm quen dùng; cần cập nhật theo đơn vị hành chính hiện hành trước khi vận hành chính thức.
+- Database Supabase đã tạo và áp dụng migration; security advisor sau khi rà soát: **0 cảnh báo**.
+- Giao diện đã có cấu hình Supabase trên nhánh `main`.
+- GitHub Actions kiểm tra cú pháp và chuẩn bị tự xuất bản bằng Pages.
+- **Chưa xác nhận GitHub Pages hoạt động công khai**, chưa kiểm thử toàn bộ luồng người dùng thực tế.
+- Chưa tạo tài khoản admin đầu tiên; chưa cấu hình Auth Site URL cho domain sau khi xuất bản.
+- Trước khi nhận dữ liệu người dùng thật, cần kiểm thử và hoàn thiện chính sách dữ liệu cá nhân, xử lý file upload và giám sát bảo mật.
 
-## GitHub Pages
+## Triển khai
 
-Workflow `.github/workflows/deploy-pages.yml` tự xuất bản trang tĩnh từ nhánh `main` khi GitHub Pages được bật với nguồn **GitHub Actions** tại Settings → Pages.
+Mở [docs/DEPLOY.md](docs/DEPLOY.md) để kích hoạt GitHub Pages, cấu hình Authentication URL và thiết lập tài khoản quản trị.
 
-## Lộ trình
-
-1. Xây dựng backend và PostgreSQL, lưu việc làm tập trung.
-2. Đăng ký/đăng nhập ứng viên, nhà tuyển dụng và quản trị.
-3. Kiểm duyệt, xác minh doanh nghiệp, chống tin giả.
-4. Nộp hồ sơ, quản lý CV và thông báo việc làm.
-5. SEO, analytics, bảo mật, sao lưu và vận hành thực tế.
-
-## Bản fullstack v2 (trên nhánh phát triển)
-
-Hệ thống mới nằm ở `app.html`. Mã frontend ở `src/app.js`, migration ở `supabase/schema.sql`, hướng dẫn đầy đủ tại [docs/DEPLOY.md](docs/DEPLOY.md). Để triển khai thành website dùng cơ sở dữ liệu thật, cần kết nối Supabase và tạo GitHub Actions repository variables `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`. Không cần gửi các khóa này qua chat, và tuyệt đối không đưa service-role key lên giao diện.
+**Không bao giờ** đưa Supabase secret key hay service_role key vào frontend.
