@@ -95,7 +95,11 @@ drop trigger if exists protect_job_status on public.jobs;
 create trigger protect_job_status before insert or update on public.jobs for each row execute function public.guard_job_status();
 create or replace function public.guard_application_status() returns trigger language plpgsql as $$
 begin
- if tg_op='INSERT' then new.status:='submitted';
+ if tg_op='INSERT' then
+   new.status:='submitted';
+   if new.cv_path is not null and split_part(new.cv_path,'/',1) <> new.candidate_id::text then
+     raise exception 'CV must belong to the applying candidate';
+   end if;
  elsif new.status is distinct from old.status and not exists (
   select 1 from public.jobs j join public.companies c on c.id=j.company_id
   where j.id=new.job_id and c.owner_id=auth.uid()
