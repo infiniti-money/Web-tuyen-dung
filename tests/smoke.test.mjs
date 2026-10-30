@@ -1,19 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,existsSync} from 'node:fs';
-const read=path=>readFileSync(path,'utf8');
-test('app bundle and migration files exist',()=>{
- for(const f of ['index.html','app.html','src/app.js','supabase/schema.sql','config.example.js','scripts/build-pages.mjs'])assert.ok(existsSync(f),f);
+import {readFileSync,existsSync,readdirSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
+
+const read=p=>readFileSync(p,'utf8');
+
+test('application, schema and public config exist',()=>{
+ for(const f of ['index.html','app.html','src/app.js','supabase/schema.sql','config.public.js','scripts/build-pages.mjs'])
+  assert.ok(existsSync(f),f);
 });
-test('server secrets are never required by browser bundle',()=>{
- const app=read('src/app.js');
- assert.ok(app.includes('employer_applications'), 'employer applications RPC required');
- assert.ok(!app.includes('SUPABASE_SERVICE_ROLE_KEY'),'service role never reaches browser');
+test('only a publishable Supabase key is loaded in the browser',()=>{
+ const conf=read('config.public.js'), app=read('app.html');
+ assert.match(conf,/sb_publishable_/);
+ assert.ok(!conf.includes('service_role'));
+ assert.ok(!conf.includes('sb_secret_'));
+ assert.match(app,/src="\.\/config\.public\.js"/);
+ assert.ok(!app.includes('src="./config.js"'));
 });
-test('RLS and privacy policies exist',()=>{
+test('RLS, scoped employer access and private storage configured',()=>{
  const sql=read('supabase/schema.sql');
- for(const table of ['profiles','companies','jobs','applications'])assert.ok(sql.includes('alter table public.'+table+' enable row level security'),table);
- assert.ok(sql.includes("values('candidate-cvs','candidate-cvs',false"),'private CV storage');
- assert.ok(sql.includes('grant execute on function public.employer_applications() to authenticated'));
- assert.ok(sql.includes('check_job_publication'));
+ for(const table of ['profiles','companies','jobs','applications'])
+  assert.ok(sql.includes('alter table public.'+table+' enable row level security'),table);
+ assert.ok(sql.includes("values('candidate-cvs','candidate-cvs',false"));
+ assert.ok(sql.includes('app_private.employer_applications()'));
+ assert.ok(sql.includes('revoke execute on function public.check_job_publication()'));
+});
+test('production artifact excludes source, database and workflow files',()=>{
+ execFileSync('node',['scripts/build-pages.mjs'],{stdio:'pipe'});
+ const top=readdirSync('dist').sort();
+ assert.deepEqual(top,['.nojekyll','app.html','config.public.js','index.html','src']);
+ assert.deepEqual(readdirSync('dist/src'),['app.js']);
+ assert.ok(!existsSync('dist/supabase/schema.sql'));
 });
