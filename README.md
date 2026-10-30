@@ -33,3 +33,7 @@ Workflow `.github/workflows/deploy-pages.yml` tự xuất bản trang tĩnh từ
 3. Kiểm duyệt, xác minh doanh nghiệp, chống tin giả.
 4. Nộp hồ sơ, quản lý CV và thông báo việc làm.
 5. SEO, analytics, bảo mật, sao lưu và vận hành thực tế.
+
+## Bản fullstack v2 (trên nhánh phát triển)
+
+Hệ thống mới nằm ở `app.html`. Mã frontend ở `src/app.js`, migration ở `supabase/schema.sql`, hướng dẫn đầy đủ tại [docs/DEPLOY.md](docs/DEPLOY.md). Để triển khai thành website dùng cơ sở dữ liệu thật, cần kết nối Supabase và tạo GitHub Actions repository variables `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`. Không cần gửi các khóa này qua chat, và tuyệt đối không đưa service-role key lên giao diện.
