@@ -259,3 +259,37 @@ drop trigger if exists protect_application_cv on public.applications;
 create trigger protect_application_cv before insert or update on public.applications
 for each row execute function public.guard_application_cv();
 revoke all on function public.guard_application_cv() from public, anon, authenticated;
+
+-- Security hardening verified in production Supabase database 2026-10-30.
+alter function public.guard_profile_role() set search_path=public,pg_temp;
+alter function public.guard_company_status() set search_path=public,pg_temp;
+alter function public.guard_job_status() set search_path=public,pg_temp;
+alter function public.guard_application_status() set search_path=public,pg_temp;
+alter function public.guard_company_ownership() set search_path=public,pg_temp;
+alter function public.guard_job_content() set search_path=public,pg_temp;
+alter function public.guard_application_fields() set search_path=public,pg_temp;
+alter function public.guard_application_cv() set search_path=public,pg_temp;
+revoke execute on function public.check_job_publication() from public, anon, authenticated;
+-- Keep the privileged lookup hidden from the PostgREST exposed schema.
+create or replace function app_private.employer_applications()
+returns table(id uuid, job_id uuid, full_name text, cover_letter text,
+              cv_path text, status text, created_at timestamptz)
+language sql stable security definer set search_path=public,pg_temp as $$
+ select a.id,a.job_id,p.full_name,a.cover_letter,a.cv_path,a.status,a.created_at
+ from public.applications a
+ join public.jobs j on j.id=a.job_id
+ join public.companies c on c.id=j.company_id
+ join public.profiles p on p.id=a.candidate_id
+ where c.owner_id=auth.uid() and app_private.is_employer()
+ order by a.created_at desc
+$$;
+revoke all on function app_private.employer_applications() from public,anon;
+grant execute on function app_private.employer_applications() to authenticated;
+create or replace function public.employer_applications()
+returns table(id uuid, job_id uuid, full_name text, cover_letter text,
+              cv_path text, status text, created_at timestamptz)
+language sql stable security invoker set search_path=public,pg_temp as $$
+ select * from app_private.employer_applications()
+$$;
+revoke all on function public.employer_applications() from public,anon;
+grant execute on function public.employer_applications() to authenticated;
