@@ -229,19 +229,8 @@ grant insert(owner_id,name,description,location), update(name,description,locati
 grant insert(company_id,title,description,requirements,location,industry,salary_min,salary_max,status),
  update(title,description,requirements,location,industry,salary_min,salary_max,status) on public.jobs to authenticated;
 grant insert(job_id,candidate_id,cover_letter,cv_path,status), update(status) on public.applications to authenticated;
--- Recruiter may read candidate profiles only for applications submitted to their company.
-create policy "employer reads applicants profiles" on public.profiles for select to authenticated using (
- exists (
- select 1 from public.applications a join public.jobs j on j.id=a.job_id
- join public.companies c on c.id=j.company_id
- where a.candidate_id=profiles.id and c.owner_id=auth.uid()
- )
-);
-create policy "candidate removes unused cv" on storage.objects for delete to authenticated
-using (
- bucket_id='candidate-cvs' and (storage.foldername(name))[1]=auth.uid()::text
- and not exists(select 1 from public.applications where cv_path=name)
-);
+-- Recruiter accesses candidate name only via the scoped employer_applications() RPC; applicant profiles remain private.
+-- CV cleanup permission is already defined in the candidate deletes orphan cv policy above.
 grant usage on schema app_private to anon, authenticated;
 revoke all on function app_private.is_admin() from public, anon, authenticated;
 revoke all on function app_private.is_employer() from public, anon, authenticated;
