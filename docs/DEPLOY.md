@@ -65,3 +65,14 @@ Bản có dữ liệu thật: `https://infiniti-money.github.io/Web-tuyen-dung/a
 
 ## Dữ liệu cá nhân
 Ứng viên có thể tải lên CV PDF tối đa 5 MB, lưu vào bucket riêng tư. Nhà tuyển dụng chỉ được đọc hồ sơ của ứng viên đã ứng tuyển vào tin do mình sở hữu. Cần bổ sung chính sách lưu giữ/xóa dữ liệu, chống spam, kiểm tra file upload, email xác nhận và giám sát trước khi vận hành chính thức.
+
+## 30/10/2026 — Project Supabase thực tế
+- Supabase project: `hung-yen-jobs` (region Singapore, project ref `lxarzbxymgjomsztftqj`).
+- `supabase/schema.sql` đã được áp dụng cho cơ sở dữ liệu này qua migration chính thức.
+- Các bản vá bảo mật tách riêng trong migration history; nội dung vá cũng đã được nối vào cuối `supabase/schema.sql` để cài đặt mới được nhất quán.
+- Supabase security advisor sau khi vá: không còn cảnh báo.
+- `config.public.js` chứa **chỉ** public project URL và Supabase publishable key. Tệp này được phép phân phối cho trình duyệt và được sử dụng trực tiếp bởi `app.html`. Không được lưu server secret/service-role key trong tệp đó.
+- GitHub Pages workflow đóng gói `index.html`, `app.html`, `src/app.js`, `config.public.js`.
+- Không cần thêm GitHub repository variables để kết nối dự án hiện tại.
+- Vẫn cần thiết lập **Authentication > URL Configuration** trong Supabase theo domain chính thức (Site URL và Redirect URLs), cùng email confirmation và chính sách giới hạn tần suất đăng ký.
+- Chưa kiểm thử end-to-end với tài khoản người dùng thật, upload CV thực tế, và GitHub Pages live. Chưa có tài khoản quản trị ban đầu.
