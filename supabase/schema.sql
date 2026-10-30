@@ -1,0 +1,140 @@
+-- Hưng Yên Jobs v2 — run in Supabase SQL editor
+create extension if not exists pgcrypto;
+create table if not exists public.profiles (
+ id uuid primary key references auth.users(id) on delete cascade,
+ full_name text not null default '',
+ phone text,
+ role text not null default 'candidate' check(role in ('candidate','employer','admin')),
+ created_at timestamptz not null default now()
+);
+create table if not exists public.companies (
+ id uuid primary key default gen_random_uuid(),
+ owner_id uuid not null references public.profiles(id) on delete cascade,
+ name text not null check(length(trim(name))>=2),
+ description text not null default '',
+ location text not null default 'Hưng Yên',
+ status text not null default 'pending' check(status in ('pending','approved','rejected')),
+ created_at timestamptz not null default now()
+);
+create table if not exists public.jobs (
+ id uuid primary key default gen_random_uuid(),
+ company_id uuid not null references public.companies(id) on delete cascade,
+ title text not null check(length(trim(title))>=5),
+ description text not null,
+ requirements text not null default '',
+ location text not null,
+ industry text not null,
+ salary_min integer check (salary_min>=0),
+ salary_max integer check (salary_max>=0),
+ status text not null default 'pending' check(status in ('draft','pending','published','rejected','closed')),
+ created_at timestamptz not null default now(),
+ constraint valid_salary check(salary_max is null or salary_min is null or salary_max>=salary_min)
+);
+create table if not exists public.applications (
+ id uuid primary key default gen_random_uuid(),
+ job_id uuid not null references public.jobs(id) on delete cascade,
+ candidate_id uuid not null references public.profiles(id) on delete cascade,
+ cover_letter text not null default '',
+ cv_path text,
+ status text not null default 'submitted' check(status in ('submitted','reviewing','shortlisted','rejected','hired')),
+ created_at timestamptz not null default now(),
+ unique(job_id,candidate_id)
+);
+create index if not exists jobs_location_status_idx on public.jobs(status,location);
+create index if not exists jobs_company_idx on public.jobs(company_id);
+create index if not exists applications_job_idx on public.applications(job_id);
+create index if not exists applications_candidate_idx on public.applications(candidate_id);
+create unique index if not exists one_company_per_owner on public.companies(owner_id);
+create or replace function public.create_profile() returns trigger language plpgsql security definer set search_path=public as $$
+begin
+ insert into public.profiles(id,full_name,role) values(new.id,coalesce(new.raw_user_meta_data->>'full_name',''),
+ case when new.raw_user_meta_data->>'requested_role'='employer' then 'employer' else 'candidate' end);
+ return new;
+end;$$;
+drop trigger if exists auth_user_created on auth.users;
+create trigger auth_user_created after insert on auth.users for each row execute function public.create_profile();
+-- Prevent users from elevating privileges by altering their profile.
+create or replace function public.guard_profile_role() returns trigger language plpgsql as $$
+begin
+ if new.role is distinct from old.role then raise exception 'Role cannot be changed'; end if;
+ return new;
+end;$$;
+drop trigger if exists protect_role on public.profiles;
+create trigger protect_role before update on public.profiles for each row execute function public.guard_profile_role();
+-- Keep status transitions server-controlled; only admin can approve or publish.
+create or replace function public.is_admin() returns boolean language sql stable security definer set search_path=public as $$
+ select exists(select 1 from public.profiles where id=auth.uid() and role='admin');$$;
+create or replace function public.is_employer() returns boolean language sql stable security definer set search_path=public as $$
+ select exists(select 1 from public.profiles where id=auth.uid() and role='employer');$$;
+create or replace function public.is_candidate() returns boolean language sql stable security definer set search_path=public as $$
+ select exists(select 1 from public.profiles where id=auth.uid() and role='candidate');$$;
+create or replace function public.guard_company_status() returns trigger language plpgsql as $$
+begin
+ if not public.is_admin() then
+   if tg_op='INSERT' then new.status:='pending';
+   elsif new.status is distinct from old.status then raise exception 'Only administrators can review companies'; end if;
+ end if;
+ return new;
+end;$$;
+drop trigger if exists protect_company_status on public.companies;
+create trigger protect_company_status before insert or update on public.companies for each row execute function public.guard_company_status();
+create or replace function public.guard_job_status() returns trigger language plpgsql as $$
+begin
+ if not public.is_admin() then
+   if tg_op='INSERT' then
+     if new.status not in ('draft','pending') then new.status:='pending'; end if;
+   elsif new.status is distinct from old.status then
+     if old.status='draft' and new.status='pending' then null;
+     elsif old.status='published' and new.status='closed' then null;
+     else raise exception 'Job publication requires moderation'; end if;
+   end if;
+ end if;
+ return new;
+end;$$;
+drop trigger if exists protect_job_status on public.jobs;
+create trigger protect_job_status before insert or update on public.jobs for each row execute function public.guard_job_status();
+create or replace function public.guard_application_status() returns trigger language plpgsql as $$
+begin
+ if tg_op='INSERT' then new.status:='submitted';
+ elsif new.status is distinct from old.status and not exists (
+  select 1 from public.jobs j join public.companies c on c.id=j.company_id
+  where j.id=new.job_id and c.owner_id=auth.uid()
+ ) and not public.is_admin() then raise exception 'Application status belongs to employer'; end if;
+ return new;
+end;$$;
+drop trigger if exists protect_application_status on public.applications;
+create trigger protect_application_status before insert or update on public.applications for each row execute function public.guard_application_status();
+alter table public.profiles enable row level security;
+alter table public.companies enable row level security;
+alter table public.jobs enable row level security;
+alter table public.applications enable row level security;
+create policy "own or admin profile read" on public.profiles for select using(id=auth.uid() or public.is_admin());
+create policy "own profile edit" on public.profiles for update using(id=auth.uid()) with check(id=auth.uid());
+create policy "companies public approved or owner or admin" on public.companies for select using(status='approved' or owner_id=auth.uid() or public.is_admin());
+create policy "employer creates own company" on public.companies for insert to authenticated with check(owner_id=auth.uid() and public.is_employer());
+create policy "employer updates company or admin" on public.companies for update to authenticated using(owner_id=auth.uid() or public.is_admin()) with check(owner_id=auth.uid() or public.is_admin());
+create policy "jobs public published or owner or admin" on public.jobs for select using(status='published' or public.is_admin() or exists(select 1 from public.companies c where c.id=company_id and c.owner_id=auth.uid()));
+create policy "approved employer creates jobs" on public.jobs for insert to authenticated with check(public.is_employer() and exists(select 1 from public.companies c where c.id=company_id and c.owner_id=auth.uid() and c.status='approved'));
+create policy "employer updates own jobs or admin" on public.jobs for update to authenticated using(public.is_admin() or exists(select 1 from public.companies c where c.id=company_id and c.owner_id=auth.uid())) with check(public.is_admin() or exists(select 1 from public.companies c where c.id=company_id and c.owner_id=auth.uid()));
+create policy "candidate creates own application" on public.applications for insert to authenticated with check(candidate_id=auth.uid() and public.is_candidate() and exists(select 1 from public.jobs j where j.id=job_id and j.status='published'));
+create policy "candidate employer admin view applications" on public.applications for select to authenticated using(candidate_id=auth.uid() or public.is_admin() or exists(select 1 from public.jobs j join public.companies c on c.id=j.company_id where j.id=job_id and c.owner_id=auth.uid()));
+create policy "employer updates applications" on public.applications for update to authenticated using(public.is_admin() or exists(select 1 from public.jobs j join public.companies c on c.id=j.company_id where j.id=job_id and c.owner_id=auth.uid())) with check(public.is_admin() or exists(select 1 from public.jobs j join public.companies c on c.id=j.company_id where j.id=job_id and c.owner_id=auth.uid()));
+-- Private CV bucket; access allowed to candidate, employer for related application, admin.
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+values('candidate-cvs','candidate-cvs',false,5242880,array['application/pdf'])
+on conflict (id) do nothing;
+create policy "candidate uploads own pdf" on storage.objects for insert to authenticated
+with check(bucket_id='candidate-cvs' and public.is_candidate() and (storage.foldername(name))[1]=auth.uid()::text);
+create policy "candidate or permitted reviewer reads cv" on storage.objects for select to authenticated
+using(bucket_id='candidate-cvs' and (
+ (storage.foldername(name))[1]=auth.uid()::text or public.is_admin() or exists(
+ select 1 from public.applications a join public.jobs j on j.id=a.job_id
+ join public.companies c on c.id=j.company_id
+ where a.cv_path=name and c.owner_id=auth.uid()
+ )
+));
+-- First admin is provisioned MANUALLY by a trusted operator in SQL editor,
+-- never through public registration:
+-- drop trigger protect_role on public.profiles;
+-- update public.profiles set role='admin' where id='<verified-user-uuid>';
+-- create trigger protect_role before update on public.profiles for each row execute function public.guard_profile_role();
