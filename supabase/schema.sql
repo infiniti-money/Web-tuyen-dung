@@ -175,3 +175,42 @@ drop trigger if exists protect_application_fields on public.applications;
 create trigger protect_application_fields before update on public.applications for each row execute function public.guard_application_fields();
 -- Explicitly limit employer updates to existing companies; even after permission
 -- errors, no public SELECT of pending company records belonging to other owners.
+
+-- Employer-safe application listing: reveal only applicant name and application
+-- data for jobs belonging to the authenticated employer. Avoid exposing phone.
+create or replace function public.employer_applications()
+returns table(
+ id uuid, job_id uuid, full_name text, cover_letter text,
+ cv_path text, status text, created_at timestamptz
+)
+language sql stable security definer set search_path=public as $$
+ select a.id,a.job_id,p.full_name,a.cover_letter,a.cv_path,a.status,a.created_at
+ from public.applications a
+ join public.jobs j on j.id=a.job_id
+ join public.companies c on c.id=j.company_id
+ join public.profiles p on p.id=a.candidate_id
+ where c.owner_id=auth.uid() and public.is_employer()
+ order by a.created_at desc;
+$$;
+revoke all on function public.employer_applications() from public, anon;
+grant execute on function public.employer_applications() to authenticated;
+
+-- Upload failures must be cleanable without leaving orphaned private CVs.
+create policy "candidate deletes orphan cv" on storage.objects for delete
+to authenticated using(
+ bucket_id='candidate-cvs'
+ and (storage.foldername(name))[1]=auth.uid()::text
+ and not exists(select 1 from public.applications a where a.cv_path=name)
+);
+-- Never publish a job associated with a company that is not approved.
+create or replace function public.check_job_publication() returns trigger
+language plpgsql security definer set search_path=public as $$
+begin
+ if new.status='published' and not exists (
+  select 1 from public.companies c where c.id=new.company_id and c.status='approved'
+ ) then raise exception 'Cannot publish jobs from an unapproved company'; end if;
+ return new;
+end;$$;
+drop trigger if exists require_approved_company on public.jobs;
+create trigger require_approved_company before insert or update on public.jobs
+for each row execute function public.check_job_publication();
