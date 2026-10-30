@@ -256,3 +256,17 @@ revoke all on function public.guard_application_status() from public, anon, auth
 revoke all on function public.guard_company_ownership() from public, anon, authenticated;
 revoke all on function public.guard_job_content() from public, anon, authenticated;
 revoke all on function public.guard_application_fields() from public, anon, authenticated;
+
+-- Uploaded CV must belong to the applicant's own storage directory.
+create or replace function public.guard_application_cv() returns trigger language plpgsql as $$
+begin
+ if new.cv_path is not null and (
+   split_part(new.cv_path,'/',1) <> new.candidate_id::text
+   or lower(right(new.cv_path,4)) <> '.pdf'
+ ) then raise exception 'CV path must be an applicant-owned PDF'; end if;
+ return new;
+end;$$;
+drop trigger if exists protect_application_cv on public.applications;
+create trigger protect_application_cv before insert or update on public.applications
+for each row execute function public.guard_application_cv();
+revoke all on function public.guard_application_cv() from public, anon, authenticated;
