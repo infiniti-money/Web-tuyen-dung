@@ -17,14 +17,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check JavaScript syntax
         run: node --input-type=module --check < src/app.js
-      - name: Check required assets
+      - name: Automated smoke tests and privacy checks
         run: |
-          test -f index.html
-          test -f app.html
-          test -f supabase/schema.sql
-          test -f config.example.js
-          test -f config.public.js
-          grep -q 'sb_publishable_' config.public.js
+          node --test tests/smoke.test.mjs
   deploy:
     if: github.event_name != 'pull_request'
     needs: validate
@@ -38,15 +33,11 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build static site with public Supabase configuration
-        run: |
-          mkdir -p _site/src
-          cp index.html app.html config.public.js _site/
-          cp src/app.js _site/src/
-          touch _site/.nojekyll
+      - name: Build safe production artifact
+        run: node scripts/build-pages.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: dist
       - id: deployment
         uses: actions/deploy-pages@v4
