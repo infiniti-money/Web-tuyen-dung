@@ -1,26 +1,52 @@
-name: Deploy static website to GitHub Pages
+name: Validate and deploy Hưng Yên Jobs to GitHub Pages
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
-  pages: write
-  id-token: write
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: node --input-type=module --check < src/app.js
+      - name: Check required assets
+        run: |
+          test -f index.html
+          test -f app.html
+          test -f supabase/schema.sql
+          test -f config.example.js
+          test -f config.public.js
+          grep -q 'sb_publishable_' config.public.js
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build static site with public Supabase configuration
+        run: |
+          mkdir -p _site/src
+          cp index.html app.html config.public.js _site/
+          cp src/app.js _site/src/
+          touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
