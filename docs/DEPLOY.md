@@ -54,3 +54,14 @@ Bản có dữ liệu thật: `https://infiniti-money.github.io/Web-tuyen-dung/a
 6. Employer chỉ xem ứng viên liên quan tới công việc của công ty mình; tải CV bằng URL có thời hạn.
 7. Candidate không được xem hồ sơ của người khác; employer không được đổi role và không được đăng tin tự duyệt.
 8. Kiểm tra chính sách bảo vệ dữ liệu cá nhân, giới hạn email, sao lưu, log, giám sát và kế hoạch khôi phục.
+
+## GitHub Pages: kết nối cấu hình Supabase (không dùng secret)
+1. Mở Settings > Secrets and variables > Actions > Variables.
+2. Tạo `SUPABASE_URL` và `SUPABASE_PUBLISHABLE_KEY` với **public** Supabase project URL và publishable key. Không dùng secret/service_role key.
+3. Bật Settings > Pages > Source: GitHub Actions. Workflow `.github/workflows/deploy-pages.yml` tự tạo `config.js` trong artifact khi push nhánh main.
+4. Truy cập `/app.html` để sử dụng hệ thống thật; `/index.html` vẫn là trang giới thiệu.
+5. Chạy migration SQL và cấu hình Authentication Site URL trước khi mời người dùng đăng ký.
+6. Kiểm thử RLS thực tế, quản trị và tải CV trước khi mở dịch vụ cho cộng đồng.
+
+## Dữ liệu cá nhân
+Ứng viên có thể tải lên CV PDF tối đa 5 MB, lưu vào bucket riêng tư. Nhà tuyển dụng chỉ được đọc hồ sơ của ứng viên đã ứng tuyển vào tin do mình sở hữu. Cần bổ sung chính sách lưu giữ/xóa dữ liệu, chống spam, kiểm tra file upload, email xác nhận và giám sát trước khi vận hành chính thức.
