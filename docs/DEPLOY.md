@@ -31,3 +31,26 @@ Chưa chạy thử end-to-end trên Supabase thật; chưa có email thông báo
 - GitHub Pages có thể host frontend tĩnh và kết nối Supabase nhưng **không** chạy PostgreSQL.
 - `index.html` vẫn là trang demo gốc; `app.html` là hệ thống mới.
 - `config.js` được gitignore để ngăn commit nhầm cấu hình. Trên GitHub Pages cần quy trình build/deploy cấu hình phù hợp; có thể công khai publishable key nhưng không được đưa service key lên client.
+
+## Kết nối GitHub Pages qua Repository Variables
+Trong GitHub repository, vào **Settings → Secrets and variables → Actions → Variables** và tạo:
+- `SUPABASE_URL`: Project URL dạng `https://<project-ref>.supabase.co`.
+- `SUPABASE_PUBLISHABLE_KEY`: Supabase **publishable key** (`sb_publishable_...`) hoặc legacy anon key.
+
+Hai giá trị trên là thông tin **công khai trong trình duyệt**; bảo mật dữ liệu dựa trên các policy RLS trong `schema.sql`. **KHÔNG BAO GIỜ** lưu service_role/secret API key trong GitHub repo variables dùng cho website tĩnh.
+Chọn **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+Sau khi merge nhánh này vào main, push sẽ kích hoạt workflow kiểm tra mã nguồn và build thư mục `dist`.
+Workflow chỉ đóng gói `index.html`, `app.html`, `src/app.js`, `config.js`; không đưa migration SQL lên site. Nếu chưa có biến Supabase, site demo vẫn hoạt động, còn `app.html` sẽ hiện trang hướng dẫn cấu hình.
+
+URL website dự kiến: `https://infiniti-money.github.io/Web-tuyen-dung/`.
+Bản có dữ liệu thật: `https://infiniti-money.github.io/Web-tuyen-dung/app.html`.
+
+## Quy trình kiểm thử trước khi mở công khai
+1. Đăng ký candidate + xác minh email, đăng nhập lại.
+2. Đăng ký employer + xác minh email, tạo company; kiểm tra status=pending.
+3. Admin cấp phép company; xác nhận employer không thể tự thay đổi `approved`.
+4. Employer đăng tin pending; admin duyệt published; xem trang public.
+5. Candidate tải PDF đúng định dạng và ứng tuyển.
+6. Employer chỉ xem ứng viên liên quan tới công việc của công ty mình; tải CV bằng URL có thời hạn.
+7. Candidate không được xem hồ sơ của người khác; employer không được đổi role và không được đăng tin tự duyệt.
+8. Kiểm tra chính sách bảo vệ dữ liệu cá nhân, giới hạn email, sao lưu, log, giám sát và kế hoạch khôi phục.
