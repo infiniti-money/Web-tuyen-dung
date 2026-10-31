@@ -125,7 +125,7 @@ def test_public_detail(browser):
         # Use the real on-screen company link.
         page.locator(".detail-company a").click()
         try:
-            wait_ready(page,".company-profile-hero h1")
+            page.locator(".company-profile-hero h1").wait_for(state="visible",timeout=12000)
         except Exception:
             print("DEBUG company navigation:",page.url,flush=True)
             print("DEBUG company root:",page.locator("#root").inner_text()[:1400],flush=True)
