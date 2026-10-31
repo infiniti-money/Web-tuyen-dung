@@ -309,3 +309,70 @@ td .badge{max-width:max-content}
  .company-profile-hero{align-items:flex-start}
  .job-actions{flex-direction:column}
 }
+
+
+/* Saved careers, recruiter search, accessible mobile actions */
+.saved-counter{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;
+ padding:0 5px;border-radius:99px;background:#e1f1fc;color:#116b9e;font-size:10px;font-weight:800}
+.nav-link.active .saved-counter{background:#cbe5f8}
+.quick-filters{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:15px 0 0;padding-top:15px;border-top:1px solid var(--line)}
+.quick-filters>span{font-size:11px;font-weight:700;color:#607b8f}
+.quick-filter{min-height:34px;border:1px solid #d7e8f2;border-radius:99px;padding:7px 14px;
+ background:#f5f9fc;color:#436983;font-size:11px;box-shadow:none}
+.quick-filter:hover:not(:disabled),.quick-filter.active{background:#e2f4fc;color:#086894;border-color:#92c9e7}
+.marketplace-job .job-top{position:relative}
+.marketplace-job .job-main{flex:1}
+.save-job{min-width:max-content;padding:8px 10px;min-height:34px;border-radius:10px;border:1px solid #d6e8f3!important;
+ background:#f3f8fd!important;color:#386b8a!important;font-size:11px;box-shadow:none!important}
+.save-job[aria-pressed="true"]{background:#fff1f3!important;border-color:#f3c5d0!important;color:#b43357!important}
+.save-job:hover{transform:none!important}
+.share-job{padding:9px 11px;min-height:37px;font-size:11px;box-shadow:none}
+.job-actions .inline-actions{gap:6px;flex-wrap:wrap}
+.job-actions .inline-actions>*{white-space:nowrap}
+.detail-social-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:13px 0 14px}
+.detail-social-actions button{min-height:39px;min-width:110px}
+.saved-overview{display:flex;align-items:center;justify-content:space-between;gap:20px;
+ background:linear-gradient(125deg,#fff,#f5fbff);border:1px solid #dbebf4;padding:26px 28px}
+.saved-overview h2{margin:7px 0 9px}
+.saved-overview p{margin:0;font-size:12px;max-width:650px}
+.saved-overview .button{white-space:nowrap}
+.saved-grid{margin:22px 0}
+.candidate-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}
+.shortcut-card{display:flex;flex-direction:column;gap:8px;padding:19px 22px;min-height:110px;
+ border:1px solid #d9e8f4;border-radius:17px;background:linear-gradient(140deg,#fff,#f4faff);
+ color:#23698e;box-shadow:0 8px 26px #0b40600b;font-size:19px}
+.shortcut-card:hover{transform:translateY(-2px);box-shadow:0 14px 36px #0b40601a;text-decoration:none}
+.shortcut-card strong{font-size:15px;color:#164e76}
+.shortcut-card span{font-size:11px;color:#7b92a4}
+.cv-file-hint{margin:-12px 0 18px;color:#617f96;font-size:11px;overflow-wrap:anywhere}
+.applicant-toolbar{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,.95fr) auto;
+ align-items:end;gap:14px;margin-bottom:17px}
+.applicant-toolbar input,.applicant-toolbar select{margin:0}
+.applicant-toolbar .result-count{padding-bottom:13px;white-space:nowrap}
+tr[hidden]{display:none!important}
+@media(max-width:1000px){
+ .header-inner{gap:12px}
+ .primary-nav .nav-link{padding:10px}
+ .applicant-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .applicant-toolbar .result-count{grid-column:1/-1;padding:0}
+}
+@media(max-width:700px){
+ .primary-nav{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .primary-nav .nav-link{padding:9px 3px;font-size:10px;gap:3px;flex-wrap:nowrap}
+ .saved-counter{min-width:16px;height:16px;font-size:9px;padding:0 3px}
+ .job-top{flex-wrap:wrap}
+ .marketplace-job .save-job{margin-left:auto}
+ .saved-overview{padding:19px;align-items:flex-start;flex-direction:column}
+ .candidate-shortcuts{grid-template-columns:1fr;gap:10px}
+ .shortcut-card{min-height:86px;padding:14px 17px}
+ .applicant-toolbar{grid-template-columns:1fr}
+ .applicant-toolbar .result-count{grid-column:auto}
+ .job-actions .inline-actions{justify-content:flex-start}
+ .job-actions .inline-actions button,.job-actions .inline-actions .button{padding:9px 10px;min-height:37px}
+}
+@media(max-width:390px){
+ .nav-link .nav-icon{display:none}
+ .primary-nav .nav-link{font-size:9px}
+ .job-top .job-main{min-width:170px}
+ .marketplace-job .save-job{margin:0}
+}
