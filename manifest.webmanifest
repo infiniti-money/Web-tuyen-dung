@@ -1,0 +1,12 @@
+{
+  "id": "./app.html",
+  "name": "Hưng Yên Jobs",
+  "short_name": "HY Jobs",
+  "description": "Tìm việc và nhận thông báo việc làm phù hợp tại Hưng Yên",
+  "lang": "vi",
+  "start_url": "./app.html#jobs",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f8fc",
+  "theme_color": "#0d2f4b"
+}
