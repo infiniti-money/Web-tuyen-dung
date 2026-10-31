@@ -2,7 +2,6 @@
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const pageSize=12;
 const filterDefaults=()=>({keyword:'',location:'',industry:'',salary:'',sort:'newest'});
-const escapeAttr=e=>e;
 const cash=n=>n==null?'Thỏa thuận':new Intl.NumberFormat('vi-VN').format(Number(n))+' triệu';
 function salaryLabel(job){
   if(job.salary_min==null&&job.salary_max==null)return 'Thỏa thuận';
@@ -22,7 +21,7 @@ function matchesSalary(job,band){
   return true;
 }
 export function createMarketplace({db,root,request,e,heading,onApply}){
-  let allJobs=null,filters=filterDefaults(),currentPage=1,selectedCompany='';
+  let allJobs=null,loadedAt=0,filters=filterDefaults(),currentPage=1,selectedCompany='';
   const norm=s=>String(s??'').normalize('NFC').toLocaleLowerCase('vi').trim();
   const link=(text,href,css='')=>'<a class="'+css+'" href="'+href+'">'+e(text)+'</a>';
   const empty=message=>'<div class="empty-state"><strong>'+e(message)+'</strong><p>Thử điều chỉnh bộ lọc hoặc quay lại danh sách việc làm.</p></div>';
@@ -56,7 +55,7 @@ export function createMarketplace({db,root,request,e,heading,onApply}){
     root.querySelectorAll('[data-apply]').forEach(button=>button.onclick=()=>onApply(button.dataset.apply));
   }
   async function jobs(){
-    if(!allJobs)allJobs=await fetchJobs();
+    if(!allJobs||Date.now()-loadedAt>60000){allJobs=await fetchJobs();loadedAt=Date.now()}
     const locations=[...new Set(allJobs.map(j=>j.location).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
     const industries=[...new Set(allJobs.map(j=>j.industry).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
     const currentCompany=selectedCompany&&allJobs.find(j=>j.company_id===selectedCompany)?.companies?.name;
@@ -65,7 +64,7 @@ export function createMarketplace({db,root,request,e,heading,onApply}){
       '<h1>Việc làm phù hợp.<br>Ứng tuyển dễ dàng.</h1><p>Lọc công việc theo ngành, mức lương và khu vực. Xem chi tiết trước khi gửi hồ sơ trực tiếp đến doanh nghiệp.</p>'+
       '<span class="hero-count"><b>'+allJobs.length+'</b> tin đang tuyển'+(allJobs.length>=1000?' (1000 tin mới nhất)':'')+'</span></section>'+
       '<section class="panel advanced-search" aria-label="Bộ lọc việc làm">'+
-      '<div class="advanced-search-head"><h2>Bộ lọc tìm việc</h2><button type="button" class="secondary" id="clearFilters">Đặt lại bộ lọc</button></div>'+
+      '<div class="advanced-search-head"><h2>Bộ lọc tìm việc</h2><div class="inline-actions"><button type="button" class="secondary" id="refreshJobs">↻ Làm mới</button><button type="button" class="secondary" id="clearFilters">Đặt lại bộ lọc</button></div></div>'+
       '<div class="advanced-fields"><div><label for="search">Vị trí hoặc doanh nghiệp</label><input type="search" id="search" maxlength="90" placeholder="Nhập chức danh, công ty..."></div>'+
       '<div><label for="region">Khu vực làm việc</label><select id="region">'+option('','Tất cả khu vực',filters.location)+locations.map(v=>option(v,v,filters.location)).join('')+'</select></div>'+
       '<div><label for="industry">Ngành nghề</label><select id="industry">'+option('','Tất cả ngành nghề',filters.industry)+industries.map(v=>option(v,v,filters.industry)).join('')+'</select></div>'+
@@ -111,6 +110,7 @@ export function createMarketplace({db,root,request,e,heading,onApply}){
     for(const [id,key] of [['region','location'],['industry','industry'],['salary','salary'],['sort','sort']])
       root.querySelector('#'+id).onchange=event=>{filters[key]=event.target.value;currentPage=1;draw()};
     root.querySelector('#clearFilters').onclick=()=>{filters=filterDefaults();selectedCompany='';currentPage=1;return jobs()};
+    root.querySelector('#refreshJobs').onclick=()=>{allJobs=null;currentPage=1;jobs().catch(error=>{console.error('refresh jobs failed',error)})};
     if(root.querySelector('#clearCompany'))root.querySelector('#clearCompany').onclick=()=>{selectedCompany='';currentPage=1;jobs()};
     draw();
   }
@@ -155,7 +155,7 @@ export function createMarketplace({db,root,request,e,heading,onApply}){
       '<div class="company-summary-number">'+companyJobs.length+'</div><p class="muted">Tin tuyển dụng đã xuất bản</p>'+
       '<button id="viewCompanyJobs" type="button" class="wide-button">Tìm việc tại doanh nghiệp →</button></div></aside></div>';
     bindApply();
-    root.querySelector('#viewCompanyJobs').onclick=()=>{selectedCompany=company.id;currentPage=1;location.hash='jobs';if(location.hash==='#jobs')jobs()};
+    root.querySelector('#viewCompanyJobs').onclick=()=>{selectedCompany=company.id;currentPage=1;location.hash='jobs'};
   }
   return {jobs,jobDetail,companyProfile};
 }
