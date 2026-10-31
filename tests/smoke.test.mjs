@@ -29,7 +29,7 @@ test('production artifact excludes source, database and workflow files',()=>{
  execFileSync('node',['scripts/build-pages.mjs'],{stdio:'pipe'});
  const top=readdirSync('dist').sort();
  assert.deepEqual(top,['.nojekyll','app.html','config.public.js','index.html','src']);
- assert.deepEqual(readdirSync('dist/src'),['account-features.js','app.css','app.js','bookmarks.js','marketplace.js']);
+ assert.deepEqual(readdirSync('dist/src'),['account-features.js','push-notifications.js','app.css','app.js','bookmarks.js','marketplace.js']);
  assert.ok(!existsSync('dist/supabase/schema.sql'));
 });
 
@@ -181,4 +181,42 @@ test('company public profile exposes only approved company metadata',()=>{
  assert.match(market,/\.eq\('status','approved'\)/);
  assert.match(market,/function safeWebsite\(value\)/);
  assert.match(app,/employerProfileForm/);
+});
+
+test('notification controls are explicitly opted in by the candidate',()=>{
+ const app=read('src/account-features.js'),push=read('src/push-notifications.js');
+ assert.match(app,/name="email_opt_in"/);
+ assert.match(app,/pref\?\.email_opt_in/);
+ assert.match(app,/enableWebPush\(\{db,request,user\}\)/);
+ assert.match(app,/disableWebPush\(\{db,request,user\}\)/);
+ assert.match(push,/Notification\.requestPermission\(\)/);
+ assert.match(push,/userVisibleOnly:true/);
+ assert.match(push,/\.eq\("user_id",user\.id\)/);
+ assert.ok(!push.includes('SERVICE_ROLE'));
+});
+test('scoped notifications worker does not handle private applicant information',()=>{
+ const sw=read('sw.js'),shell=read('app.html');
+ assert.match(shell,/href="\.\/manifest\.webmanifest"/);
+ assert.match(shell,/src="\.\/config\.notifications\.js"/);
+ assert.match(sw,/self\.registration\.showNotification/);
+ assert.match(sw,/candidate\.origin===self\.location\.origin/);
+ assert.match(sw,/notificationclick/);
+ assert.ok(!sw.includes('cv_path'));
+ assert.ok(!sw.includes('service_role'));
+});
+test('all dispatched messages are opted in, deduplicated and secret protected',()=>{
+ const backend=read('supabase/functions/job-alert-dispatch/index.ts');
+ const migration=read('supabase/migrations/20261031071529_opt_in_job_email_webpush_foundation.sql');
+ const workflow=read('.github/workflows/dispatch-job-alerts.yml');
+ assert.match(backend,/equalToken\(req\.headers\.get\("x-alert-job-secret"\)/);
+ assert.match(backend,/pref\[channel\+"_opt_in"\]!==true/);
+ assert.match(backend,/job_notification_deliveries/);
+ assert.match(backend,/email_confirmed_at/);
+ assert.match(backend,/isKnownPushEndpoint/);
+ assert.match(migration,/email_opt_in boolean not null default false/);
+ assert.match(migration,/push_opt_in boolean not null default false/);
+ assert.match(migration,/unique\(user_id,job_id,channel\)/);
+ assert.match(migration,/revoke all on public\.job_notification_deliveries from public,anon,authenticated/);
+ assert.match(workflow,/HYJOBS_ALERT_DISPATCH_ENABLED/);
+ assert.match(workflow,/HYJOBS_ALERT_JOB_SECRET/);
 });
