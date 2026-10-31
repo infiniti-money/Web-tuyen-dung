@@ -34,9 +34,69 @@ if(q('#jobForm'))q('#jobForm').onsubmit=async ev=>{ev.preventDefault();let f=new
 root.querySelectorAll('[data-close]').forEach(b=>b.onclick=async()=>{try{await request(db.from('jobs').update({status:'closed'}).eq('id',b.dataset.close).select('id,status').single());navigate('dashboard')}catch(ex){fail(ex)}});
 root.querySelectorAll('[data-status]').forEach(s=>s.onchange=async()=>{const previous=s.dataset.saved,requested=s.value;s.disabled=true;try{const updated=await request(db.from('applications').update({status:requested}).eq('id',s.dataset.status).select('id,status').single());s.dataset.saved=updated.status;note('Đã cập nhật trạng thái: '+(statusLabels[updated.status]||updated.status))}catch(ex){s.value=previous;fail(ex)}finally{s.disabled=false}});
 root.querySelectorAll('[data-cv]').forEach(b=>b.onclick=async()=>{try{let {data}=await db.storage.from('candidate-cvs').createSignedUrl(b.dataset.cv,60);if(!data?.signedUrl)throw Error('Không thể mở CV');window.open(data.signedUrl,'_blank','noopener,noreferrer')}catch(ex){fail(ex)}})}
-async function admin(){let companies=await request(db.from('companies').select('*').order('created_at',{ascending:false}).limit(100));let jobs=await request(db.from('jobs').select('*,companies(name,status)').order('created_at',{ascending:false}).limit(100));root.innerHTML=heading('Trung tâm kiểm duyệt','Quản trị hệ thống','Xét duyệt doanh nghiệp và tin tuyển dụng với quyền truy cập được bảo vệ.')+'<div class="stats-grid">'+statCard('Doanh nghiệp',companies.length,'Hồ sơ trong hệ thống')+statCard('Công ty chờ duyệt',companies.filter(c=>c.status==='pending').length,'Đang cần xem xét')+statCard('Tin chờ duyệt',jobs.filter(j=>j.status==='pending').length,'Công việc chưa xuất bản')+'</div><div class="panel"><h2>Doanh nghiệp</h2><div class="table-wrap"><table><tr><th>Doanh nghiệp</th><th>Khu vực</th><th>Trạng thái</th><th>Kiểm duyệt</th></tr>'+companies.map(c=>'<tr><td>'+e(c.name)+'</td><td>'+e(c.location)+'</td><td>'+badge(c.status)+'</td><td>'+['approved','rejected'].map(x=>'<button class="secondary" data-company="'+e(c.id)+'" data-newstatus="'+x+'"'+e(statusLabels[x]||x)+'</button> ').join('')+'</td></tr>').join('')+'</table></div></div><div class="panel"><h2>Tin tuyển dụng</h2><div class="table-wrap"><table><tr><th>Vị trí</th><th>Doanh nghiệp</th><th>Trạng thái</th><th>Kiểm duyệt</th></tr>'+jobs.map(j=>'<tr><td>'+e(j.title)+'</td><td>'+e(j.companies?.name)+'</td><td>'+badge(j.status)+'</td><td>'+['published','rejected','closed'].map(x=>'<button class="secondary" data-job="'+e(j.id)+'" data-newstatus="'+x+'" '+(x==='published'&&j.companies?.status!=='approved'?'disabled title="Doanh nghiệp chưa duyệt"':'')+''+e(statusLabels[x]||x)+'</button> ').join('')+'</td></tr>').join('')+'</table></div></div>';
-root.querySelectorAll('[data-company]').forEach(b=>b.onclick=async()=>{try{await request(db.from('companies').update({status:b.dataset.newstatus}).eq('id',b.dataset.company).select('id,status').single());note('Đã cập nhật doanh nghiệp');navigate('dashboard')}catch(ex){fail(ex)}});
-root.querySelectorAll('[data-job]').forEach(b=>b.onclick=async()=>{try{await request(db.from('jobs').update({status:b.dataset.newstatus}).eq('id',b.dataset.job).select('id,status').single());note('Đã cập nhật tin');navigate('dashboard')}catch(ex){fail(ex)}})}
+async function admin(){
+  // Existing policies permit full moderation only for the admin role.
+  const companies=await request(db.from('companies').select('*').order('created_at',{ascending:false}).limit(100));
+  const jobs=await request(db.from('jobs').select('*,companies(name,status)').order('created_at',{ascending:false}).limit(100));
+  const totalCompanies=companies.length,companyPending=companies.filter(c=>c.status==='pending').length;
+  const jobPending=jobs.filter(j=>j.status==='pending').length,jobPublished=jobs.filter(j=>j.status==='published').length;
+  root.innerHTML=heading('Trung tâm quản trị','Bảng điều khiển quản trị','Theo dõi tình trạng tuyển dụng và xử lý các doanh nghiệp, tin đăng đang chờ phê duyệt.')+
+    '<div class="stats-grid admin-stat-grid">'+
+      statCard('Doanh nghiệp',totalCompanies,'Đã đăng ký trong hệ thống')+
+      statCard('Doanh nghiệp chờ duyệt',companyPending,'Cần kiểm tra thông tin')+
+      statCard('Tin chờ duyệt',jobPending,'Chưa xuất bản công khai')+
+      statCard('Tin đang tuyển',jobPublished,'Đang hiển thị cho ứng viên')+'</div>'+
+    '<div class="admin-overview panel"><div><span class="eyebrow">TỔNG QUAN KIỂM DUYỆT</span><h2>Tiến độ xử lý tin tuyển dụng</h2><p class="muted">Số lượng dựa trên tin được trả về cho quản trị viên.</p></div>'+
+    '<div class="status-bars"><div><span>Đã xuất bản</span><strong>'+jobPublished+'</strong></div>'+
+    '<div class="status-track"><span style="width:'+(jobs.length?Math.round(jobPublished/jobs.length*100):0)+'%"></span></div>'+
+    '<div><span>Đang chờ duyệt</span><strong>'+jobPending+'</strong></div>'+
+    '<div class="status-track warning"><span style="width:'+(jobs.length?Math.round(jobPending/jobs.length*100):0)+'%"></span></div></div></div>'+
+    '<div class="panel moderation-panel"><div class="moderation-header"><h2>Trung tâm xét duyệt</h2><p class="muted">Chỉ tài khoản quản trị được phê duyệt dữ liệu. Những mục chưa được duyệt sẽ không xuất hiện công khai.</p>'+
+    '<div class="admin-controls"><div><label for="adminSearch">Tìm doanh nghiệp hoặc vị trí</label><input id="adminSearch" type="search" placeholder="Tên công ty, vị trí tuyển dụng..."></div>'+
+    '<div><label for="companyFilter">Lọc doanh nghiệp</label><select id="companyFilter"><option value="pending">Chờ duyệt</option><option value="">Tất cả</option><option value="approved">Đã duyệt</option><option value="rejected">Từ chối</option></select></div>'+
+    '<div><label for="jobFilter">Lọc tin tuyển dụng</label><select id="jobFilter"><option value="pending">Chờ duyệt</option><option value="">Tất cả</option><option value="published">Đang tuyển</option><option value="rejected">Từ chối</option><option value="closed">Đã đóng</option></select></div></div></div>'+
+    '<section class="moderation-group"><div class="section-heading"><h3>Hồ sơ doanh nghiệp</h3><span class="result-count" id="adminCompanyCount"></span></div><div id="adminCompanies"></div></section>'+
+    '<section class="moderation-group"><div class="section-heading"><h3>Tin tuyển dụng</h3><span class="result-count" id="adminJobCount"></span></div><div id="adminJobs"></div></section></div>';
+  function tableRows(head,body,emptyMessage){
+    if(!body.length)return '<div class="empty-state"><strong>'+e(emptyMessage)+'</strong><p>Hãy điều chỉnh bộ lọc để xem các mục khác.</p></div>';
+    return '<div class="table-wrap"><table><thead><tr>'+head.map(t=>'<th>'+e(t)+'</th>').join('')+'</tr></thead><tbody>'+body.join('')+'</tbody></table></div>';
+  }
+  function draw(){
+    const needle=q('#adminSearch').value.trim().toLocaleLowerCase('vi');
+    const cf=q('#companyFilter').value,jf=q('#jobFilter').value;
+    const cs=companies.filter(c=>(!cf||c.status===cf)&&(c.name+' '+c.location).toLocaleLowerCase('vi').includes(needle));
+    const js=jobs.filter(j=>(!jf||j.status===jf)&&(j.title+' '+j.companies?.name).toLocaleLowerCase('vi').includes(needle));
+    q('#adminCompanyCount').textContent=cs.length+' doanh nghiệp';
+    q('#adminJobCount').textContent=js.length+' tin tuyển dụng';
+    q('#adminCompanies').innerHTML=tableRows(['Doanh nghiệp','Khu vực','Trạng thái','Kiểm duyệt'],
+      cs.map(c=>'<tr><td><strong class="table-title">'+e(c.name)+'</strong>'+(c.status==='approved'?'<div><a href="#company/'+e(c.id)+'">Xem trang công khai</a></div>':'')+'</td><td>'+e(c.location)+'</td><td>'+badge(c.status)+'</td>'+
+        '<td><div class="table-actions">'+['approved','rejected'].filter(x=>x!==c.status).map(x=>
+          '<button type="button" class="'+(x==='rejected'?'secondary danger':'')+'" data-company="'+e(c.id)+'" data-newstatus="'+x+'">'+(x==='approved'?'Phê duyệt':'Từ chối')+'</button>').join('')+'</div></td></tr>'),
+      'Không có doanh nghiệp trong bộ lọc');
+    q('#adminJobs').innerHTML=tableRows(['Vị trí','Doanh nghiệp','Trạng thái','Kiểm duyệt'],
+      js.map(j=>'<tr><td><strong class="table-title">'+e(j.title)+'</strong><div class="small-note">'+e(j.location)+'</div></td>'+
+        '<td>'+e(j.companies?.name)+'</td><td>'+badge(j.status)+'</td><td><div class="table-actions">'+
+        ['published','rejected','closed'].filter(x=>x!==j.status).map(x=>
+          '<button type="button" class="'+(x!=='published'?'secondary':'')+'" data-job="'+e(j.id)+'" data-newstatus="'+x+'" '+
+          (x==='published'&&j.companies?.status!=='approved'?'disabled title="Doanh nghiệp chưa được duyệt"':'')+'>'+
+          (x==='published'?'Xuất bản':x==='rejected'?'Từ chối':'Đóng tin')+'</button>').join('')+'</div></td></tr>'),
+      'Không có tin tuyển dụng trong bộ lọc');
+    root.querySelectorAll('[data-company]').forEach(b=>b.onclick=async()=>{
+      b.disabled=true;
+      try{await request(db.from('companies').update({status:b.dataset.newstatus}).eq('id',b.dataset.company).select('id,status').single());
+        note('Đã cập nhật doanh nghiệp');await navigate('dashboard')}catch(ex){b.disabled=false;fail(ex)}
+    });
+    root.querySelectorAll('[data-job]').forEach(b=>b.onclick=async()=>{
+      b.disabled=true;
+      try{await request(db.from('jobs').update({status:b.dataset.newstatus}).eq('id',b.dataset.job).select('id,status').single());
+        note('Đã cập nhật tin');await navigate('dashboard')}catch(ex){b.disabled=false;fail(ex)}
+    });
+  }
+  q('#adminSearch').oninput=draw;
+  q('#companyFilter').onchange=draw;
+  q('#jobFilter').onchange=draw;
+  draw();
+}
 document.querySelectorAll('[data-page]').forEach(a=>a.onclick=ev=>{ev.preventDefault();const next=a.dataset.page;if(location.hash.slice(1)===next)navigate(next);else location.hash=next});
 q('#logoutBtn').onclick=async()=>{await db?.auth.signOut();note('Đã đăng xuất');navigate('jobs')};
 navigate(location.hash.slice(1)||'jobs');
