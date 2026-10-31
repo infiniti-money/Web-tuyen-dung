@@ -13,7 +13,7 @@ permissions:
 jobs:
   browser-qa:
     name: Playwright mobile UX and readonly production checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
