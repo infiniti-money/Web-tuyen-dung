@@ -22,12 +22,16 @@ function matchesSalary(job,band){
   if(band==='ge25')return (high??low)>=25;
   return true;
 }
-export function createMarketplace({db,root,request,e,heading,onApply,onMessage=()=>{}}){
+export function createMarketplace({db,root,request,e,heading,onApply,onMessage=()=>{},onCloudSave=async()=>{}}){
   let allJobs=null,loadedAt=0,filters=filterDefaults(),currentPage=1,selectedCompany='';
   const bookmarks=createBookmarks();
-  const savedText=id=>bookmarks.has(id)?'♥ Đã lưu':'♡ Lưu tin';
-  const savedAction=id=>'<button type="button" class="save-job secondary" data-save="'+e(id)+'" aria-pressed="'+bookmarks.has(id)+'" aria-label="'+(bookmarks.has(id)?'Bỏ lưu tin':'Lưu tin tuyển dụng')+'">'+savedText(id)+'</button>';
-  function updateSavedCount(){for(const id of ['savedCounter','savedSummary']){const badge=document.getElementById(id);if(badge)badge.textContent=String(bookmarks.count())}}
+  let cloudOwner=null,cloudSaved=new Set();
+  const allSaved=()=>cloudOwner?[...cloudSaved]:bookmarks.all();
+  const hasSaved=id=>cloudOwner?cloudSaved.has(id):bookmarks.has(id);
+  function setCloudSaved(owner,ids){cloudOwner=owner;cloudSaved=new Set((ids||[]).filter(id=>uuid.test(id)));updateSavedCount()}
+  const savedText=id=>hasSaved(id)?'♥ Đã lưu':'♡ Lưu tin';
+  const savedAction=id=>'<button type="button" class="save-job secondary" data-save="'+e(id)+'" aria-pressed="'+hasSaved(id)+'" aria-label="'+(hasSaved(id)?'Bỏ lưu tin':'Lưu tin tuyển dụng')+'">'+savedText(id)+'</button>';
+  function updateSavedCount(){for(const id of ['savedCounter','savedSummary']){const badge=document.getElementById(id);if(badge)badge.textContent=String(allSaved().length)}}
   async function loadJobs(){if(!allJobs||Date.now()-loadedAt>60000){allJobs=await fetchJobs();loadedAt=Date.now()}return allJobs}
   function shareJob(id,title){
     if(!uuid.test(id))return;
@@ -67,16 +71,26 @@ export function createMarketplace({db,root,request,e,heading,onApply,onMessage=(
   }
   function bindApply(){
     root.querySelectorAll('[data-apply]').forEach(button=>button.onclick=()=>onApply(button.dataset.apply));
-    root.querySelectorAll('[data-save]').forEach(button=>button.onclick=()=>{
-      const result=bookmarks.toggle(button.dataset.save);
-      if(!result.ok){onMessage('Không thể lưu việc làm trên trình duyệt này');return}
+    root.querySelectorAll('[data-save]').forEach(button=>button.onclick=async()=>{
+      const id=button.dataset.save,desired=!hasSaved(id);
+      button.disabled=true;
+      let result;
+      try{
+        if(cloudOwner){
+          await onCloudSave(id,desired,cloudOwner);
+          if(desired)cloudSaved.add(id);else cloudSaved.delete(id);
+          result={saved:desired,ok:true};
+        }else result=bookmarks.toggle(id);
+        if(!result.ok)throw Error('Không thể lưu việc làm trên thiết bị');
+      }catch(error){onMessage(error.message||'Không thể đồng bộ việc làm');button.disabled=false;return}
+      button.disabled=false;
       updateSavedCount();
       root.querySelectorAll('[data-save="'+button.dataset.save+'"]').forEach(b=>{
         b.setAttribute('aria-pressed',String(result.saved));b.textContent=savedText(button.dataset.save);
         b.setAttribute('aria-label',result.saved?'Bỏ lưu tin':'Lưu tin tuyển dụng');
       });
       if(root.querySelector('#savedList'))saved().catch(()=>onMessage('Không thể làm mới danh sách đã lưu'));
-      else onMessage(result.saved?'Đã lưu tin tuyển dụng trên thiết bị':'Đã bỏ lưu tin tuyển dụng');
+      else onMessage(result.saved?(cloudOwner?'Đã đồng bộ tin vào tài khoản':'Đã lưu tin trên thiết bị'):'Đã bỏ lưu tin tuyển dụng');
     });
     root.querySelectorAll('[data-share]').forEach(button=>button.onclick=()=>shareJob(button.dataset.share,button.dataset.title));
   }
@@ -91,7 +105,7 @@ export function createMarketplace({db,root,request,e,heading,onApply,onMessage=(
       '<h1>Việc làm phù hợp.<br>Ứng tuyển dễ dàng.</h1><p>Lọc công việc theo ngành, mức lương và khu vực. Xem chi tiết trước khi gửi hồ sơ trực tiếp đến doanh nghiệp.</p>'+
       '<span class="hero-count"><b>'+allJobs.length+'</b> tin đang tuyển'+(allJobs.length>=1000?' (1000 tin mới nhất)':'')+'</span></section>'+
       '<section class="panel advanced-search" aria-label="Bộ lọc việc làm">'+
-      '<div class="advanced-search-head"><h2>Bộ lọc tìm việc</h2><div class="inline-actions"><a class="button secondary" href="#saved">♥ Đã lưu (<span id="savedSummary">'+bookmarks.count()+'</span>)</a><button type="button" class="secondary" id="refreshJobs">↻ Làm mới</button><button type="button" class="secondary" id="clearFilters">Đặt lại bộ lọc</button></div></div>'+
+      '<div class="advanced-search-head"><h2>Bộ lọc tìm việc</h2><div class="inline-actions"><a class="button secondary" href="#saved">♥ Đã lưu (<span id="savedSummary">'+allSaved().length+'</span>)</a><button type="button" class="secondary" id="refreshJobs">↻ Làm mới</button><button type="button" class="secondary" id="clearFilters">Đặt lại bộ lọc</button></div></div>'+
       '<div class="advanced-fields"><div><label for="search">Vị trí hoặc doanh nghiệp</label><input type="search" id="search" maxlength="90" placeholder="Nhập chức danh, công ty..."></div>'+
       '<div><label for="region">Khu vực làm việc</label><select id="region">'+option('','Tất cả khu vực',filters.location)+locations.map(v=>option(v,v,filters.location)).join('')+'</select></div>'+
       '<div><label for="industry">Ngành nghề</label><select id="industry">'+option('','Tất cả ngành nghề',filters.industry)+industries.map(v=>option(v,v,filters.industry)).join('')+'</select></div>'+
@@ -146,8 +160,8 @@ export function createMarketplace({db,root,request,e,heading,onApply,onMessage=(
 
   async function saved(){
     await loadJobs();updateSavedCount();
-    const ids=bookmarks.all(),items=ids.map(id=>allJobs.find(j=>j.id===id)).filter(Boolean);
-    root.innerHTML=heading('Cơ hội yêu thích','Việc làm đã lưu','Các tin được lưu riêng trên trình duyệt thiết bị này, không đồng bộ với tài khoản trên thiết bị khác.')+
+    const ids=allSaved(),items=ids.map(id=>allJobs.find(j=>j.id===id)).filter(Boolean);
+    root.innerHTML=heading('Cơ hội yêu thích','Việc làm đã lưu',(cloudOwner?'Việc làm đã đồng bộ theo tài khoản, có thể xem trên các thiết bị đăng nhập.':'Các tin lưu trên thiết bị này sẽ được chuyển vào tài khoản khi bạn đăng nhập.'))+
       '<div class="saved-overview panel"><div><span class="eyebrow">DANH SÁCH CỦA BẠN</span><h2>'+items.length+' tin tuyển dụng còn hiệu lực</h2>'+
       '<p class="muted">Chỉ hiển thị tin đang tuyển. Tin đã đóng sẽ không xuất hiện; liên kết chia sẻ vẫn kiểm tra quyền công khai.</p></div>'+
       '<a href="#jobs" class="button">Khám phá việc làm →</a></div>'+
@@ -158,7 +172,7 @@ export function createMarketplace({db,root,request,e,heading,onApply,onMessage=(
   async function jobDetail(id){
     if(!uuid.test(id)){root.innerHTML=empty('Đường dẫn công việc không hợp lệ');return}
     const job=await request(db.from('jobs')
-      .select('id,company_id,title,description,requirements,location,industry,salary_min,salary_max,created_at,companies(id,name,description,location,status)')
+      .select('id,company_id,title,description,requirements,location,industry,salary_min,salary_max,created_at,companies(id,name,description,location,status,industry,company_size)')
       .eq('id',id).eq('status','published').maybeSingle());
     if(!job||job.companies?.status!=='approved'){root.innerHTML=empty('Tin tuyển dụng không còn được công khai');return}
     const company=job.companies;
@@ -178,9 +192,10 @@ export function createMarketplace({db,root,request,e,heading,onApply,onMessage=(
     root.querySelector('#detailApply').onclick=()=>onApply(job.id);
     bindApply();
   }
+  function safeWebsite(value){try{const url=new URL(value);return url.protocol==='https:'&&url.hostname.includes('.')?url.href:null}catch{return null}}
   async function companyProfile(id){
     if(!uuid.test(id)){root.innerHTML=empty('Đường dẫn doanh nghiệp không hợp lệ');return}
-    const company=await request(db.from('companies').select('id,name,description,location,status')
+    const company=await request(db.from('companies').select('id,name,description,location,status,industry,company_size,founded_year,website,benefits')
       .eq('id',id).eq('status','approved').maybeSingle());
     if(!company){root.innerHTML=empty('Hồ sơ doanh nghiệp chưa được công khai');return}
     const companyJobs=await request(db.from('jobs')
@@ -190,7 +205,13 @@ export function createMarketplace({db,root,request,e,heading,onApply,onMessage=(
       '<section class="company-profile-hero"><div class="company-profile-logo">'+e(company.name.charAt(0).toUpperCase())+'</div>'+
       '<div><span class="eyebrow">HỒ SƠ DOANH NGHIỆP ĐÃ DUYỆT</span><h1>'+e(company.name)+'</h1><p>⌖ '+e(company.location)+'</p></div></section>'+
       '<div class="detail-layout"><div class="panel detail-primary"><h2>Giới thiệu doanh nghiệp</h2>'+
-      '<div class="long-copy">'+e(company.description||'Doanh nghiệp chưa cập nhật phần giới thiệu. Vui lòng xem các vị trí đang tuyển phía dưới.')+'</div>'+
+      '<div class="company-facts">'+
+      (company.industry?'<span class="pill">Lĩnh vực: '+e(company.industry)+'</span>':'')+
+      (company.company_size?'<span class="pill">Quy mô: '+e(company.company_size)+'</span>':'')+
+      (company.founded_year?'<span class="pill">Thành lập: '+e(company.founded_year)+'</span>':'')+
+      '</div><div class="long-copy">'+e(company.description||'Doanh nghiệp chưa cập nhật phần giới thiệu. Vui lòng xem các vị trí đang tuyển phía dưới.')+'</div>'+
+      (company.benefits?'<h2>Phúc lợi và môi trường làm việc</h2><div class="long-copy">'+e(company.benefits)+'</div>':'')+
+      (safeWebsite(company.website)?'<p><a class="button secondary" href="'+e(safeWebsite(company.website))+'" target="_blank" rel="noopener noreferrer">Truy cập website doanh nghiệp ↗</a></p>':'')+
       '<div class="results-heading"><h2>Vị trí đang tuyển</h2><span class="result-count">'+companyJobs.length+' công việc</span></div>'+
       '<div class="company-job-grid">'+(companyJobs.length?companyJobs.map(jobCard).join(''):empty('Doanh nghiệp chưa có vị trí đang tuyển'))+'</div></div>'+
       '<aside class="detail-aside"><div class="panel"><h2>Thông tin tuyển dụng</h2>'+
@@ -199,5 +220,5 @@ export function createMarketplace({db,root,request,e,heading,onApply,onMessage=(
     bindApply();
     root.querySelector('#viewCompanyJobs').onclick=()=>{selectedCompany=company.id;currentPage=1;location.hash='jobs'};
   }
-  return {jobs,saved,jobDetail,companyProfile,bookmarks};
+  return {jobs,saved,jobDetail,companyProfile,bookmarks,setCloudSaved};
 }
