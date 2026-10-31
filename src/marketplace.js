@@ -27,7 +27,7 @@ export function createMarketplace({db,root,request,e,heading,onApply,onMessage=(
   const bookmarks=createBookmarks();
   const savedText=id=>bookmarks.has(id)?'♥ Đã lưu':'♡ Lưu tin';
   const savedAction=id=>'<button type="button" class="save-job secondary" data-save="'+e(id)+'" aria-pressed="'+bookmarks.has(id)+'" aria-label="'+(bookmarks.has(id)?'Bỏ lưu tin':'Lưu tin tuyển dụng')+'">'+savedText(id)+'</button>';
-  function updateSavedCount(){const badge=document.querySelector('#savedCounter');if(badge)badge.textContent=String(bookmarks.count())}
+  function updateSavedCount(){for(const id of ['savedCounter','savedSummary']){const badge=document.getElementById(id);if(badge)badge.textContent=String(bookmarks.count())}}
   async function loadJobs(){if(!allJobs||Date.now()-loadedAt>60000){allJobs=await fetchJobs();loadedAt=Date.now()}return allJobs}
   function shareJob(id,title){
     if(!uuid.test(id))return;
