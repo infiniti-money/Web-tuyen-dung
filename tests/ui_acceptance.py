@@ -111,6 +111,8 @@ def test_public_detail(browser):
     context=browser.new_context(viewport={"width":390,"height":844},is_mobile=True,
                                 device_scale_factor=1,has_touch=True)
     page=context.new_page()
+    errors=[]
+    page.on("pageerror", lambda ex: errors.append(str(ex)))
     try:
         # Deep link must load directly, not only after coming from the listing page.
         page.goto(BASE+"#job/"+JOB,wait_until="domcontentloaded",timeout=65000)
@@ -122,7 +124,14 @@ def test_public_detail(browser):
         page.screenshot(path=str(ARTIFACTS/"job-detail-mobile.png"),full_page=True)
         # Use the real on-screen company link.
         page.locator(".detail-company a").click()
-        wait_ready(page,".company-profile-hero h1")
+        try:
+            wait_ready(page,".company-profile-hero h1")
+        except Exception:
+            print("DEBUG company navigation:",page.url,flush=True)
+            print("DEBUG company root:",page.locator("#root").inner_text()[:1400],flush=True)
+            print("DEBUG runtime errors:",errors,flush=True)
+            page.screenshot(path=str(ARTIFACTS/"company-navigation-debug.png"),full_page=True)
+            raise
         assert ORG in page.locator(".company-profile-hero h1").inner_text()
         assert TITLE in page.locator(".company-job-grid").inner_text()
         no_horizontal_overflow(page)
