@@ -24,8 +24,10 @@ async function syncSavedAccount(){
   // Migrate anonymous local bookmarks once. Server wins for subsequent account sessions.
   const pending=marketplace.bookmarks.all();
   if(pending.length){
-    const rows=pending.map(job_id=>({user_id:user.id,job_id}));
-    await request(db.from('saved_jobs').upsert(rows,{onConflict:'user_id,job_id',ignoreDuplicates:true}));
+    // Previously saved public jobs may have been deleted/closed; avoid foreign-key failures on login.
+    const stillPublished=await request(db.from('jobs').select('id').in('id',pending).eq('status','published').limit(100));
+    const rows=stillPublished.map(({id:job_id})=>({user_id:user.id,job_id}));
+    if(rows.length)await request(db.from('saved_jobs').upsert(rows,{onConflict:'user_id,job_id',ignoreDuplicates:true}));
   }
   const saved=await request(db.from('saved_jobs').select('job_id').eq('user_id',user.id).order('created_at',{ascending:false}).limit(1000));
   marketplace.setCloudSaved(user.id,saved.map(x=>x.job_id));
