@@ -1,4 +1,5 @@
-// Candidate-facing account features. No background job, browser push, or automatic email.
+import {enableWebPush,disableWebPush,isPushConfigured,supportedPush} from './push-notifications.js';
+// Candidate-facing account features. Opt-in channels are stored with RLS; no client sends.
 export function createAccountFeatures({db,root,request,e,heading,note,getUser,getRole}){
   const empty=(title,desc)=>'<div class="empty-state"><strong>'+e(title)+'</strong><p>'+e(desc)+'</p></div>';
   const formatSize=n=>(Number(n)/1048576).toFixed(2)+' MB';
@@ -88,13 +89,21 @@ export function createAccountFeatures({db,root,request,e,heading,note,getUser,ge
     root.innerHTML=heading('Gợi ý nghề nghiệp','Thông báo việc làm phù hợp','Thiết lập ngành nghề và khu vực để xem các tin tuyển dụng phù hợp ngay trên website.')+
       '<div class="stats-grid"><div class="stat-card"><span class="stat-label">Tin phù hợp</span><strong>'+matching.length+'</strong><small>Trong 200 tin được xem gần nhất</small></div>'+
       '<div class="stat-card"><span class="stat-label">Tin mới chưa xem</span><strong>'+unread.length+'</strong><small>Kể từ khi bạn đánh dấu đã xem</small></div></div>'+
-      '<section class="panel"><h2>Tùy chọn thông báo</h2><p class="muted">Đây là thông báo bên trong website khi bạn truy cập, chưa gửi email hay thông báo đẩy tự động.</p>'+
+      '<section class="panel"><h2>Tùy chọn thông báo</h2><p class="muted">Tùy chọn của bạn được lưu riêng theo tài khoản. Email chỉ hoạt động khi hệ thống gửi thư đã được cấu hình; thông báo đẩy cần được bạn cho phép trên thiết bị.</p>'+
       '<form id="alertPrefsForm"><label for="alertEnabled">Bật thông báo tại website</label><select id="alertEnabled" name="enabled"><option value="true"'+(enabled?' selected':'')+'>Bật</option><option value="false"'+(!enabled?' selected':'')+'>Tắt</option></select>'+
       '<div class="form-row"><div><label for="alertKeyword">Từ khóa vị trí</label><input id="alertKeyword" name="keyword" maxlength="120" value="'+e(pref?.keyword||'')+'" placeholder="Ví dụ: nhân viên kho"></div>'+
       '<div><label for="alertLocation">Khu vực</label><input id="alertLocation" name="location" maxlength="120" value="'+e(pref?.location||'')+'" placeholder="Ví dụ: Mỹ Hào"></div></div>'+
       '<div class="form-row"><div><label for="alertIndustry">Ngành nghề</label><input id="alertIndustry" name="industry" maxlength="120" value="'+e(pref?.industry||'')+'" placeholder="Ví dụ: Kho vận"></div>'+
       '<div><label for="alertSalary">Lương tối thiểu mong muốn (triệu/tháng)</label><input type="number" id="alertSalary" name="min_salary" min="0" max="100000" value="'+e(pref?.min_salary??'')+'"></div></div>'+
-      '<button type="submit">Lưu tùy chọn thông báo</button></form></section>'+
+      '<div class="alert-channels"><label class="opt-in-field"><input type="checkbox" name="email_opt_in" '+(pref?.email_opt_in?'checked':'')+'><span><strong>Nhận email việc làm phù hợp</strong><small>Chỉ gửi tin được xuất bản sau khi bạn đăng ký. Có thể bỏ chọn bất cứ lúc nào.</small></span></label></div>'+
+      '<button type="submit">Lưu tùy chọn thông báo</button></form>'+
+      '<div class="push-opt-in"><h3>Thông báo đẩy trên thiết bị</h3>'+
+      '<p class="muted" id="pushStatus" role="status">'+
+      (!supportedPush()?'Trình duyệt/thiết bị hiện chưa hỗ trợ Push. Trên iPhone, hãy thêm website vào Màn hình chính.':
+      !isPushConfigured()?'Hệ thống chưa kích hoạt khóa Web Push; tính năng này sẽ hoạt động sau khi máy chủ được cấu hình.':
+      pref?.push_opt_in?'Bạn đã bật nhận thông báo đẩy.':'Chỉ nhấn Bật khi bạn muốn nhận thông báo trên thiết bị này.')+
+      '</p><div class="inline-actions"><button id="enablePush" type="button" '+(!supportedPush()||!isPushConfigured()?'disabled':'')+'>Bật thông báo đẩy</button>'+
+      '<button id="disablePush" class="secondary" type="button">Tắt thông báo đẩy</button></div></div></section>'+
       '<section class="panel"><div class="results-heading"><div><h2>Việc làm gợi ý</h2><p class="muted">Ưu tiên tin đã xuất bản và doanh nghiệp được duyệt.</p></div>'+
       (pref?'<button id="markAlertsSeen" class="secondary" type="button">Đánh dấu đã xem</button>':'')+'</div>'+
       (!pref?empty('Chưa thiết lập thông báo','Nhập tiêu chí và lưu để xem việc làm phù hợp.'):
@@ -109,13 +118,25 @@ export function createAccountFeatures({db,root,request,e,heading,note,getUser,ge
       try{
         if(amount!==null&&(!Number.isInteger(amount)||amount<0||amount>100000))throw Error('Lương tối thiểu không hợp lệ');
         await request(db.from('job_alert_preferences').upsert({
-          user_id:user.id,enabled:f.get('enabled')==='true',keyword:String(f.get('keyword')).trim(),
+          user_id:user.id,enabled:f.get('enabled')==='true',email_opt_in:f.get('email_opt_in')==='on',keyword:String(f.get('keyword')).trim(),
           location:String(f.get('location')).trim(),industry:String(f.get('industry')).trim(),
           min_salary:amount,updated_at:new Date().toISOString(),
           last_seen_at:pref?.last_seen_at||new Date().toISOString()
         },{onConflict:'user_id'}).select('user_id').single());
         note('Đã lưu tùy chọn thông báo');await alerts();
       }catch(error){note(error.message||'Không thể lưu thông báo')}finally{btn.disabled=false}
+    };
+    const enableButton=root.querySelector('#enablePush');
+    if(enableButton)enableButton.onclick=async()=>{
+      enableButton.disabled=true;
+      try{await enableWebPush({db,request,user});note('Đã đăng ký nhận thông báo đẩy trên thiết bị');await alerts()}
+      catch(error){note(error.message||'Không thể bật thông báo đẩy');enableButton.disabled=false}
+    };
+    const disableButton=root.querySelector('#disablePush');
+    if(disableButton)disableButton.onclick=async()=>{
+      disableButton.disabled=true;
+      try{await disableWebPush({db,request,user});note('Đã tắt thông báo đẩy');await alerts()}
+      catch(error){note(error.message||'Không thể tắt thông báo');disableButton.disabled=false}
     };
     const seen=root.querySelector('#markAlertsSeen');
     if(seen)seen.onclick=async()=>{
