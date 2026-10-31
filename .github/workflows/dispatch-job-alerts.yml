@@ -1,0 +1,35 @@
+name: Dispatch opted-in job email and web push
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hung-yen-job-alert-delivery
+  cancel-in-progress: false
+jobs:
+  dispatch:
+    name: Trigger secured Supabase notification delivery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      ENABLED: ${{ vars.HYJOBS_ALERT_DISPATCH_ENABLED }}
+      SHARED_SECRET: ${{ secrets.HYJOBS_ALERT_JOB_SECRET }}
+    steps:
+      - name: Dispatch only when operator explicitly enables and configures it
+        shell: bash
+        run: |
+          if [[ "$ENABLED" != "true" ]]; then
+            echo "Automatic notifications have not been enabled by the operator."
+            exit 0
+          fi
+          if (( ${#SHARED_SECRET} < 32 )); then
+            echo "::error::Missing or too-short HYJOBS_ALERT_JOB_SECRET."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --max-time 120 --retry 0 \
+            -X POST "https://lxarzbxymgjomsztftqj.supabase.co/functions/v1/job-alert-dispatch" \
+            -H "Content-Type: application/json" \
+            -H "x-alert-job-secret: $SHARED_SECRET" \
+            --data '{"trigger":"github-actions"}'

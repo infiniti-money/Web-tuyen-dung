@@ -12,6 +12,13 @@
 - `supabase/schema.sql`: Cơ sở dữ liệu và chính sách truy cập RLS.
 - `docs/DEPLOY.md`: Hướng dẫn xuất bản, quản trị và kiểm thử.
 
+## Thông báo tự động (triển khai bảo mật, chờ kích hoạt nhà cung cấp)
+
+- Ứng viên có thể chủ động đăng ký/bỏ đăng ký email tại `#alerts`; thông báo Web Push chỉ được bật khi có khóa công khai và người dùng cấp quyền.
+- Supabase `job-alert-dispatch` đã có logic gửi Resend và Web Push theo tin tuyển dụng **mới được duyệt**, ghi log chống gửi trùng theo tài khoản/tin/kênh.
+- GitHub Actions `dispatch-job-alerts.yml` được **khóa mặc định** bằng biến `HYJOBS_ALERT_DISPATCH_ENABLED`. Không có khóa và cấu hình email/VAPID thì không gửi.
+- Cách kích hoạt bằng secrets, kiểm thử và lưu ý iPhone: [docs/AUTOMATIC_NOTIFICATIONS.md](docs/AUTOMATIC_NOTIFICATIONS.md).
+
 ## Tính năng hồ sơ ứng viên và doanh nghiệp nâng cao
 
 - **Đồng bộ việc làm đã lưu theo tài khoản:** chuyển dấu trang ẩn danh khi đăng nhập; dữ liệu sau đó nằm trong Supabase với quyền riêng theo tài khoản.

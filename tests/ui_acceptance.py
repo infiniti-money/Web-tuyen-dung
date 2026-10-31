@@ -267,6 +267,10 @@ def test_candidate_alert_and_cv_routes_mock(browser):
         assert page.get_by_text("Thông báo việc làm phù hợp").is_visible()
         assert page.locator("#alertKeyword").count()==1
         assert page.locator("#alertSalary").count()==1
+        assert page.locator('input[name="email_opt_in"]').count()==1
+        assert not page.locator('input[name="email_opt_in"]').is_checked()
+        assert page.locator("#enablePush").is_disabled()  # Missing public VAPID key, fail closed
+        assert page.locator("#disablePush").count()==1
         no_horizontal_overflow(page)
         page.screenshot(path=str(ARTIFACTS/"alerts-mobile-mocked.png"),full_page=True)
         page.goto(BASE+"?qa_candidate=1#cv",wait_until="domcontentloaded",timeout=65000)
