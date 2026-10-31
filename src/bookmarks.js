@@ -13,7 +13,7 @@ export function createBookmarks(storage){
     }catch{return []}
   }
   function write(values){
-    try{getStorage()?.setItem(KEY,JSON.stringify(values));return true}catch{return false}
+    try{const target=getStorage();if(!target)return false;target.setItem(KEY,JSON.stringify(values));return true}catch{return false}
   }
   function toggle(id){
     if(!UUID_RE.test(String(id)))return {saved:false,ok:false};
