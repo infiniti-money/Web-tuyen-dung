@@ -29,7 +29,7 @@ test('production artifact excludes source, database and workflow files',()=>{
  execFileSync('node',['scripts/build-pages.mjs'],{stdio:'pipe'});
  const top=readdirSync('dist').sort();
  assert.deepEqual(top,['.nojekyll','app.html','config.public.js','index.html','src']);
- assert.deepEqual(readdirSync('dist/src'),['app.css','app.js','marketplace.js']);
+ assert.deepEqual(readdirSync('dist/src'),['app.css','app.js','bookmarks.js','marketplace.js']);
  assert.ok(!existsSync('dist/supabase/schema.sql'));
 });
 
@@ -121,4 +121,40 @@ test('company page renders job cards or empty state without swallowing sidebar m
  assert.match(module,/companyJobs\.length\?companyJobs\.map\(jobCard\)\.join\(''\):empty\(/);
  assert.match(module,/<button id="viewCompanyJobs"/);
  assert.ok(!module.includes("companyJobs.map(jobCard).join('')||empty("));
+});
+
+test('bookmarks persist only validated IDs and reject corrupt or unavailable storage',async()=>{
+ const {createBookmarks}=await import('../src/bookmarks.js');
+ const values=new Map(),storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v)};
+ const saved=createBookmarks(storage);
+ const id='6b11db28-62f5-48f3-91d7-404a356cf31d';
+ assert.deepEqual(saved.all(),[]);
+ assert.equal(saved.toggle(id).saved,true);
+ assert.equal(saved.has(id),true);
+ assert.equal(saved.count(),1);
+ assert.equal(saved.toggle(id).saved,false);
+ assert.equal(saved.count(),0);
+ assert.equal(saved.toggle('not-a-uuid').ok,false);
+ const blocked=createBookmarks({getItem(){throw Error('disabled')},setItem(){throw Error('disabled')}});
+ assert.deepEqual(blocked.all(),[]);
+ assert.equal(blocked.toggle(id).ok,false);
+});
+test('saved jobs, share actions, quick categories and mobile navigation are present',()=>{
+ const main=read('src/app.js'),module=read('src/marketplace.js'),shell=read('app.html');
+ const css=read('src/app.css');
+ assert.match(main,/marketplace\.saved\(\)/);
+ assert.match(shell,/href="#saved"/);
+ assert.match(module,/data-save=/);
+ assert.match(module,/data-share=/);
+ assert.match(module,/data-quick=/);
+ assert.match(module,/aria-pressed/);
+ assert.match(module,/navigator\.share/);
+ assert.match(module,/navigator\.clipboard/);
+ assert.match(css,/\.saved-grid/);
+});
+test('recruiter applicant filtering and file upload feedback remain scoped',()=>{
+ const main=read('src/app.js');
+ for(const id of ['applicantSearch','applicantFilter','applicantCount','candidateCVFile','cvFileHint'])assert.ok(main.includes(id),id);
+ assert.match(main,/const match=\(!status\|\|app\.status===status\)/);
+ assert.match(main,/createSignedUrl\(b\.dataset\.cv,60\)/);
 });
