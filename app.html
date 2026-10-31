@@ -1,3 +1,45 @@
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hưng Yên Jobs | Nền tảng tuyển dụng</title><style>
-:root{font-family:system-ui,-apple-system,sans-serif;color:#18344d;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}header{background:#103b63;color:white;padding:19px 5%;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}header a{color:white;text-decoration:none}nav{display:flex;gap:15px;align-items:center;flex-wrap:wrap}button{cursor:pointer;border:0;background:#1472b9;color:white;padding:11px 16px;border-radius:8px;font-weight:650}button.secondary{background:#e9f1f8;color:#1a4b72}button:disabled{opacity:.5;cursor:wait}main{max-width:1140px;margin:34px auto;padding:0 20px}h1{font-size:29px}h2{font-size:21px}h3{font-size:16px}.muted{color:#607b90;line-height:1.7}.panel{background:white;border:1px solid #e0e9f2;border-radius:13px;padding:24px;margin:20px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:17px}.job{background:white;border:1px solid #e0e9f2;border-radius:12px;padding:20px}.job h3{margin-top:0}.pill{display:inline-block;padding:6px 9px;background:#edf5fc;border-radius:7px;margin:3px;font-size:12px}.badge{background:#e0f7ed;color:#13764e;padding:5px 8px;border-radius:7px;font-size:12px}input,select,textarea{padding:12px;border:1px solid #cbdce9;border-radius:8px;width:100%;font:inherit;margin:6px 0 14px}label{font-weight:650;font-size:13px}textarea{min-height:110px}form{max-width:620px}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}table{width:100%;border-collapse:collapse;background:white}td,th{padding:13px;border-bottom:1px solid #e0e9f2;text-align:left;vertical-align:top}th{font-size:12px;color:#5f7890}#alert{position:fixed;bottom:18px;right:18px;max-width:430px;z-index:5;padding:15px 18px;border-radius:9px;background:#123958;color:white;display:none}#alert.show{display:block}.hidden{display:none}a{color:#126eae}@media(max-width:650px){h1{font-size:24px}.form-row{grid-template-columns:1fr}table{display:block;overflow:auto}header{padding:15px 20px}}
-</style></head><body><header><a href="./index.html"><strong>✦ HƯNG YÊN JOBS</strong></a><nav><a href="#" data-page="jobs">Việc làm</a><a href="#" data-page="dashboard">Bảng điều khiển</a><a href="#" data-page="account" id="accountLink">Đăng nhập</a><button id="logoutBtn" class="secondary hidden">Đăng xuất</button></nav></header><main id="root"><h1>Đang tải hệ thống...</h1></main><div id="alert" role="status" aria-live="polite"></div><script src="./config.public.js"></script><script type="module" src="./src/app.js"></script></body></html>
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d2f4b">
+  <meta name="description" content="Hưng Yên Jobs — tìm việc làm gần nhà, nộp CV trực tuyến và kết nối doanh nghiệp tại Hưng Yên.">
+  <title>Hưng Yên Jobs | Tìm việc và tuyển dụng tại Hưng Yên</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="./index.html" aria-label="Hưng Yên Jobs — Trang chủ">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 11.5 15.2 5l10.4 6.5v13.2H5V11.5Z" fill="#ffffff24" stroke="white" stroke-width="1.9" stroke-linejoin="round"/>
+            <path d="M11.1 25V15.6h8.4V25M21.5 15.8h2.2M7.9 15.8h1.2" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <path d="m13 19.8 2.2 2.2 4.5-5" stroke="#A2F4E7" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span><span class="brand-name">HƯNG YÊN <span>JOBS</span></span><small class="brand-subtitle">CƠ HỘI GẦN BẠN</small></span>
+      </a>
+      <nav class="primary-nav" aria-label="Điều hướng chính">
+        <a href="#jobs" class="nav-link active" data-page="jobs" aria-current="page"><span class="nav-icon" aria-hidden="true">⌕</span> Việc làm</a>
+        <a href="#dashboard" class="nav-link" data-page="dashboard"><span class="nav-icon" aria-hidden="true">▦</span> Bảng điều khiển</a>
+        <a href="#account" class="nav-link" data-page="account" id="accountLink"><span class="nav-icon" aria-hidden="true">◉</span> Đăng nhập</a>
+      </nav>
+      <button id="logoutBtn" class="secondary header-logout hidden" type="button">Đăng xuất</button>
+    </div>
+  </header>
+  <main id="main"><div id="root" aria-live="off"><div class="panel"><div class="loading-shimmer" aria-hidden="true"></div><p class="muted">Đang tải hệ thống tuyển dụng...</p></div></div></main>
+  <footer class="site-footer"><div class="footer-inner">
+    <div><strong>HƯNG YÊN JOBS</strong><small>Kết nối cơ hội nghề nghiệp và doanh nghiệp địa phương.</small></div>
+    <div class="footer-links"><a href="./index.html">Trang chủ</a><a href="#jobs" data-page="jobs">Tìm việc</a><a href="#account" data-page="account">Tài khoản</a></div>
+  </div></footer>
+  <div id="alert" role="status" aria-live="polite"></div>
+  <script src="./config.public.js"></script>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>

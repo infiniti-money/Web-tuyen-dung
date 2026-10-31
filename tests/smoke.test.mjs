@@ -29,7 +29,7 @@ test('production artifact excludes source, database and workflow files',()=>{
  execFileSync('node',['scripts/build-pages.mjs'],{stdio:'pipe'});
  const top=readdirSync('dist').sort();
  assert.deepEqual(top,['.nojekyll','app.html','config.public.js','index.html','src']);
- assert.deepEqual(readdirSync('dist/src'),['app.js']);
+ assert.deepEqual(readdirSync('dist/src'),['app.css','app.js']);
  assert.ok(!existsSync('dist/supabase/schema.sql'));
 });
 
@@ -56,4 +56,23 @@ test('employer and admin changes confirm a persisted Supabase row',()=>{
  assert.match(js,/s\.value=previous;fail\(ex\)/);
  assert.match(js,/update\(\{status:b\.dataset\.newstatus\}\)\.eq\('id',b\.dataset\.company\)\.select\('id,status'\)\.single\(\)/);
  assert.match(js,/update\(\{status:b\.dataset\.newstatus\}\)\.eq\('id',b\.dataset\.job\)\.select\('id,status'\)\.single\(\)/);
+});
+
+test('responsive application has dedicated stylesheet, visible navigation and accessible focus styles',()=>{
+ const app=read('app.html'), css=read('src/app.css');
+ assert.match(app,/href="\.\/src\/app\.css"/);
+ assert.match(app,/class="skip-link"/);
+ assert.match(app,/aria-label="Điều hướng chính"/);
+ assert.match(css,/@media\(max-width:700px\)/);
+ assert.match(css,/:focus-visible/);
+ assert.match(css,/prefers-reduced-motion:reduce/);
+});
+test('live job search and dashboard rely on actual Supabase records, never demo arrays',()=>{
+ const js=read('src/app.js');
+ assert.match(js,/\.from\('jobs'\)\.select/);
+ assert.match(js,/\.eq\('status','published'\)/);
+ assert.match(js,/\.rpc\('employer_applications'\)/);
+ assert.match(js,/class="stats-grid"/);
+ assert.match(js,/class="table-wrap"/);
+ assert.match(js,/data-page/);
 });
