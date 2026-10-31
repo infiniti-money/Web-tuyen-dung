@@ -11,7 +11,7 @@
 - Storage: `candidate-cvs`, private, PDF tối đa 5 MB.
 - `config.public.js` chỉ dùng **Supabase publishable key**; không chứa mật khẩu database hoặc service_role key.
 - Schema được triển khai qua migration; các bản vá bảo mật được đồng bộ trong `supabase/schema.sql`.
-- Security Advisor sau khi sửa các hàm SQL: **0 cảnh báo**.
+- Security Advisor hiện còn cảnh báo **Leaked Password Protection Disabled**; cần kiểm tra khả năng bật trên gói dịch vụ trước khi mở công khai.
 
 ## 2. Kích hoạt giao diện trên GitHub Pages
 
@@ -64,4 +64,4 @@ commit;
 - Kiểm tra việc tạo hồ sơ trùng, lỗi mạng, upload thất bại và email thông báo.
 - Thiết lập sao lưu, quy trình xóa dữ liệu theo yêu cầu, chính sách quyền riêng tư và chống spam.
 
-**Tình trạng:** cơ sở dữ liệu hoạt động và code tích hợp đã ở `main`, nhưng chưa kiểm thử end-to-end bằng người dùng thật và chưa xác minh GitHub Pages đã xuất bản thành công. Không mời doanh nghiệp/ứng viên đưa dữ liệu cá nhân thật trước khi hoàn tất checklist này.
+**Tình trạng 31/10/2026:** GitHub Pages, Auth/SMTP, Admin phê duyệt, Employer đăng tin, Candidate tải CV PDF thật và Employer mở CV/cập nhật `reviewing` đều đã được kiểm thử. Nghiệp vụ cốt lõi đạt; vẫn cần chính sách dữ liệu, backup/restore, chống spam và nghiệm thu đa thiết bị trước khi mở rộng production. Chi tiết: [QA-ACCEPTANCE.md](QA-ACCEPTANCE.md).
