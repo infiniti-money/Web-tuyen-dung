@@ -111,3 +111,7 @@ test('admin moderation dashboard is search/filter oriented and keeps confirmed w
  assert.match(main,/statCard\('Tin chờ duyệt'/);
  assert.match(main,/update\(\{status:b\.dataset\.newstatus\}\).*?\.select\('id,status'\)\.single\(\)/s);
 });
+
+test('marketplace JavaScript module parses in Node 22',()=>{
+ execFileSync('node',['--check','src/marketplace.js'],{stdio:'pipe'});
+});
