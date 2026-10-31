@@ -135,7 +135,7 @@ using(bucket_id='candidate-cvs' and (
  (storage.foldername(name))[1]=auth.uid()::text or app_private.is_admin() or exists(
  select 1 from public.applications a join public.jobs j on j.id=a.job_id
  join public.companies c on c.id=j.company_id
- where a.cv_path=name and c.owner_id=auth.uid()
+ where a.cv_path=storage.objects.name and c.owner_id=auth.uid()
  )
 ));
 -- First admin is provisioned MANUALLY by a trusted operator in SQL editor,
