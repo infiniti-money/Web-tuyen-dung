@@ -23,12 +23,12 @@
 
 ## Trạng thái triển khai
 
-- Database Supabase đã tạo và áp dụng migration; security advisor sau khi rà soát: **0 cảnh báo**.
+- Database Supabase và migrations đã hoạt động; Storage `candidate-cvs` là private. Security Advisor còn cảnh báo **Leaked Password Protection chưa bật**.
 - Giao diện đã có cấu hình Supabase trên nhánh `main`.
 - GitHub Actions kiểm tra cú pháp và chuẩn bị tự xuất bản bằng Pages.
-- **Chưa xác nhận GitHub Pages hoạt động công khai**, chưa kiểm thử toàn bộ luồng người dùng thực tế.
-- Chưa tạo tài khoản admin đầu tiên; chưa cấu hình Auth Site URL cho domain sau khi xuất bản.
-- Trước khi nhận dữ liệu người dùng thật, cần kiểm thử và hoàn thiện chính sách dữ liệu cá nhân, xử lý file upload và giám sát bảo mật.
+- **GitHub Pages đã triển khai thành công**. Đã kiểm thử trực tiếp quy trình Admin duyệt doanh nghiệp/tin, ứng viên nộp CV PDF, Nhà tuyển dụng mở CV và chuyển trạng thái `reviewing`.
+- Tài khoản Admin đã được cấp quyền và có thể phê duyệt thực tế. Xác minh email qua SMTP iCloud đã hoạt động trong lượt thử.
+- **Chưa coi là production-ready** cho người dùng đại trà: cần chính sách quyền riêng tư/retention, backup và phục hồi, chống spam, kiểm thử đa trình duyệt; xem `docs/QA-ACCEPTANCE.md`.
 
 ## Triển khai
 

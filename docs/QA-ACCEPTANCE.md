@@ -1,70 +1,70 @@
-# Hưng Yên Jobs — Kiểm thử nghiệm thu trước khi mở công khai
+# Hưng Yên Jobs — Báo cáo kiểm thử nghiệm thu
 
-Ngày kiểm thử SQL: 31/10/2026 (Asia/Bangkok).
-Dự án Supabase: `hung-yen-jobs` (`lxarzbxymgjomsztftqj`).
-Website: https://infiniti-money.github.io/Web-tuyen-dung/app.html
+Cập nhật: **31/10/2026** (Asia/Bangkok).
 
-## Kết quả đã kiểm tra trên PostgreSQL thực tế
+- Website: https://infiniti-money.github.io/Web-tuyen-dung/app.html
+- Supabase: `hung-yen-jobs` (`lxarzbxymgjomsztftqj`), Singapore
+- GitHub: `infiniti-money/Web-tuyen-dung`
 
-Đã chạy bài thử toàn bộ quy trình dưới giao dịch `BEGIN ... ROLLBACK` với
-3 tài khoản mô phỏng (employer, candidate A, candidate B) và một ngữ cảnh Admin
-đã được cấp quyền. Kết quả: **PASS**.
+## 1. Đã kiểm thử thành công bằng dữ liệu thật trong hệ thống
 
-Các tình huống được xác minh:
-- Tự tạo `profiles` với vai trò employer/candidate từ đăng ký giả lập.
-- Nhà tuyển dụng tạo company ở trạng thái pending; không thể tự duyệt company.
-- Nhà tuyển dụng không thể tự cấp vai trò admin.
-- Admin có thể duyệt company.
-- Tin đăng cố xuất bản trực tiếp sẽ bị chuyển về pending.
-- Tin pending ẩn với khách; tin được Admin duyệt published thì khách xem được.
-- Ứng viên tạo application và trạng thái mới bị cưỡng chế thành submitted.
-- Ứng viên không được thay đổi trạng thái hồ sơ của chính mình.
-- Ứng viên B không đọc được hồ sơ hoặc profile của ứng viên A.
-- Hệ thống bác bỏ đường dẫn CV mạo danh ứng viên A.
-- Nhà tuyển dụng đọc được thông tin ứng viên A thông qua scoped RPC,
-  nhưng không đọc trực tiếp toàn bộ bảng profile ứng viên.
-- Nhà tuyển dụng đổi trạng thái application sang shortlisted; ứng viên thấy trạng thái mới.
+| Nội dung | Kết quả | Bằng chứng |
+| --- | --- | --- |
+| Đăng ký và xác minh email | PASS | Auth có tài khoản đã xác minh, các lần đăng ký hợp lệ trả HTTP 200 |
+| Đăng nhập Admin, Nhà tuyển dụng, Ứng viên | PASS | `auth.users` và vai trò `profiles` phù hợp |
+| Nhà tuyển dụng tạo doanh nghiệp | PASS | `CTY KIỂM THỬ HƯNG YÊN` |
+| Admin duyệt doanh nghiệp | PASS | `companies.status=approved` |
+| Nhà tuyển dụng đăng tin và Admin duyệt | PASS | `[TEST] Nhân viên kho Hưng Yên` là `published` |
+| Ứng viên gửi hồ sơ | PASS | Hồ sơ ứng tuyển đã tạo với `submitted` |
+| Tải PDF thật lên Storage | PASS | `candidate-cvs` có đối tượng `application/pdf`, 530094 byte |
+| Nhà tuyển dụng mở PDF bằng website | PASS — **người dùng xác nhận** | Đã mở và xem thành công trong trình duyệt |
+| Nhà tuyển dụng đổi trạng thái | PASS | `submitted → reviewing`, xác minh từ tài khoản Nhà tuyển dụng |
+| Ứng viên xem trạng thái | PASS | Truy vấn RLS của ứng viên trả `reviewing` |
+| CV không bị công khai | PASS | `candidate-cvs` là private; `anon` không được đọc đối tượng |
+| Nhà tuyển dụng chỉ xem CV có hồ sơ liên quan | PASS | RLS cho phép đúng nhà tuyển dụng, đã sửa path comparison (PR #3) |
+| Giữ được dữ liệu thật qua kiểm thử | PASS | Dữ liệu QA giả lập được `ROLLBACK`; không xóa ứng tuyển thật |
 
-**Toàn bộ fixture đã rollback**, xác minh sau thử nghiệm: 1 admin có thật, 0
-company, 0 job, 0 application, 0 CV và không còn tài khoản mô phỏng.
+### Ảnh chụp trạng thái dữ liệu tại thời điểm nghiệm thu
 
-## Các bước kiểm thử giao diện bắt buộc (cần 2 email kiểm thử do người dùng sở hữu)
+- 4 tài khoản Auth: 1 Admin, 1 Nhà tuyển dụng, 2 Ứng viên (1 trong đó chưa xác minh).
+- 1 doanh nghiệp đã duyệt.
+- 2 tin: tin `[TEST] Nhân viên kho Hưng Yên` đã xuất bản, tin `nhân viên kho` khác còn `pending`.
+- 1 đơn ứng tuyển thật: trạng thái **`reviewing`**.
+- 1 tệp CV PDF private trong Storage.
+- Giữ nguyên mọi dữ liệu hiện có; các tin thử nghiệm chưa được xóa.
 
-Không dùng mật khẩu, OTP, CV thật hoặc thông tin cá nhân thật trong báo cáo kiểm thử.
+## 2. Kiểm thử phân quyền và trạng thái
 
-1. **Admin:** dùng tài khoản quản trị đã được xác minh. Kiểm tra có trang
-   duyệt Doanh nghiệp và Tin tuyển dụng.
-2. **Employer:** đăng xuất Admin; đăng ký bằng một email thứ hai bạn kiểm soát,
-   chọn Nhà tuyển dụng, xác thực email, đăng nhập. Đăng ký doanh nghiệp
-   `CTY KIỂM THỬ HƯNG YÊN` tại `Mỹ Hào`; phải thấy `pending`.
-3. **Admin:** đăng xuất Employer, đăng nhập lại Admin, duyệt công ty sang
-   `approved`.
-4. **Employer:** đăng nhập Employer, tạo tin `[TEST] Nhân viên kho Hưng Yên`,
-   ngành `Kho vận`, địa điểm `Mỹ Hào`, lương từ 8 đến 12 triệu.
-   Tin mới phải là `pending`, không xuất hiện công khai.
-5. **Admin:** đăng nhập lại, duyệt tin sang `published`.
-   Khách không đăng nhập phải xem được tin trên trang Việc làm.
-6. **Candidate:** dùng một email kiểm thử khác bạn sở hữu, chọn Ứng viên,
-   xác minh email, đăng nhập. Nhấn Ứng tuyển tin trên và nhập thư giới thiệu
-   mẫu. Tải lên **PDF giả lập không có thông tin cá nhân thật**, dưới 5 MB.
-   Kiểm tra hồ sơ chuyển sang `submitted`. Thử PDF lớn hơn 5 MB hoặc
-   định dạng không được chấp nhận, phải được báo lỗi.
-7. **Employer:** đăng nhập lại, thấy hồ sơ ứng viên, mở được CV PDF qua
-   đường dẫn có thời hạn, thay đổi trạng thái sang `reviewing` hoặc
-   `shortlisted`.
-8. **Candidate:** đăng nhập lại, thấy trạng thái ứng tuyển đã cập nhật.
-   Không xem được hồ sơ ứng viên khác.
-9. **Admin:** xác minh các công ty/tin chỉ xuất hiện trong phạm vi phù hợp,
-   và không có cảnh báo lỗi.
+- Thử bằng ngữ cảnh JWT người dùng tương ứng với `authenticated`, không bypass RLS để giả lập quyền người dùng.
+- `anon` không đọc được CV hoặc đơn ứng tuyển.
+- Employer đúng doanh nghiệp đọc được đối tượng CV và hồ sơ qua RPC `public.employer_applications()`.
+- Candidate truy vấn lại hồ sơ của mình sau khi đổi trạng thái.
+- Thay đổi trạng thái ứng tuyển được COMMIT và truy vấn lại thấy `reviewing`.
+- Bài kiểm thử giả lập nhiều vai trò khác được `ROLLBACK` và không tạo tài khoản/công ty giả lâu dài.
+- CV PDF đã được người dùng mở thành công; việc đọc sâu nội dung bytes của đối tượng qua công cụ quản trị không thuộc phạm vi kiểm thử này.
 
-## Điều kiện mở chính thức
+## 3. Các bản vá đã áp dụng
 
-- Toàn bộ 9 bước trên thành công trong trình duyệt trên máy tính và điện thoại.
-- Đã xác minh gửi email và mở liên kết xác thực đúng domain.
-- Kiểm thử upload, signed URL và giới hạn quyền truy cập CV qua HTTP thật.
-- Có chính sách quyền riêng tư, thời hạn lưu dữ liệu, phương án xóa dữ liệu,
-  chống spam và phương án sao lưu/phục hồi.
-- Cân nhắc cấu hình email SMTP riêng trước khi có nhiều người đăng ký.
+1. **PR #3:** Sửa đường dẫn `storage.objects.name` trong CV Storage RLS; đã áp dụng migration và kiểm tra lại. <https://github.com/infiniti-money/Web-tuyen-dung/pull/3>
+2. **PR #4:** Thêm chức năng gửi lại email xác minh, đã triển khai trên GitHub Pages. <https://github.com/infiniti-money/Web-tuyen-dung/pull/4>
+3. **Bản hoàn thiện tiếp theo:** Việt hóa trạng thái ứng tuyển, chặn tải CV lên khi hồ sơ bị trùng, yêu cầu Supabase trả về bản ghi đã lưu trước khi báo cập nhật thành công.
 
-**Trạng thái hiện tại:** PASS kiểm thử SQL; đang chờ kiểm thử giao diện và
-file upload thật. Không coi là nghiệm thu production cho đến khi hoàn thành.
+## 4. Chưa đủ điều kiện để tuyên bố production-ready
+
+- **Bảo vệ tài khoản:** Supabase Security Advisor còn cảnh báo `auth_leaked_password_protection` chưa bật.
+- **Email:** SMTP iCloud đã gửi email kiểm thử thành công, nhưng chưa có kiểm thử tải thực tế hoặc phương án gửi email giao dịch quy mô lớn.
+- **Chính sách dữ liệu:** Cần công bố chính sách quyền riêng tư, thời hạn lưu/xóa CV, đầu mối tiếp nhận yêu cầu xóa dữ liệu và quy trình xử lý sự cố.
+- **Sao lưu/phục hồi:** Cần lập và thử phương án backup Postgres cùng đối tượng CV trong Storage, không giả định backup DB bao gồm file CV.
+- **Bảo vệ thao tác:** Tiếp tục kiểm thử file PDF lỗi, dung lượng vượt 5 MB, giới hạn tốc độ, spam, nhiều người dùng đồng thời.
+- **Thiết bị:** Chưa có bằng chứng nghiệm thu toàn bộ trên nhiều trình duyệt và kích cỡ màn hình.
+- **Dữ liệu kiểm thử:** Chưa xóa các hồ sơ, CV hoặc tin có tên `[TEST]`; chỉ dọn sau khi Admin quyết định.
+
+## 5. Tiêu chí nghiệm thu giai đoạn sau
+
+1. Hoàn tất giao diện tiếng Việt và thông báo lỗi rõ ràng.
+2. Mọi hành động lưu trạng thái phải xác nhận bản ghi trả về từ Supabase; không báo thành công khi cập nhật 0 dòng.
+3. Các thay đổi được kiểm tra bằng `node --check`, bộ smoke test và GitHub Actions, chỉ gộp sau khi CI xanh.
+4. Xác minh email, nộp CV, mở CV và cập nhật trạng thái thực tế sau mỗi thay đổi liên quan quyền truy cập.
+5. Chuẩn bị quy chế dữ liệu, backup/restore và cơ chế chống lạm dụng trước khi mở rộng người dùng.
+
+**Kết luận:** Nghiệm thu quy trình nghiệp vụ cốt lõi **PASS**; kiểm thử và điều kiện vận hành production vẫn đang được hoàn thiện.

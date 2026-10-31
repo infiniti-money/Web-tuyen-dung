@@ -32,3 +32,28 @@ test('production artifact excludes source, database and workflow files',()=>{
  assert.deepEqual(readdirSync('dist/src'),['app.js']);
  assert.ok(!existsSync('dist/supabase/schema.sql'));
 });
+
+
+test('Vietnamese statuses are presented without changing database status keys',()=>{
+ const js=read('src/app.js');
+ for(const [key,value] of [['submitted','Đã nộp'],['reviewing','Đang xem xét'],['shortlisted','Vào vòng tiếp theo'],['hired','Đã tuyển']])
+  assert.ok(js.includes(key+":'"+value+"'"),key);
+ assert.match(js,/value="'\+x\+'" /);
+ assert.match(js,/roleLabels\[profile\?\.role\]/);
+});
+test('candidate duplicate application is checked before PDF upload',()=>{
+ const js=read('src/app.js');
+ const start=js.indexOf("async function apply(jobId)");
+ const guard=js.indexOf("const existing=await request(db.from('applications')",start);
+ const upload=js.indexOf("db.storage.from('candidate-cvs').upload(",start);
+ assert.ok(start>=0&&guard>start&&upload>guard);
+ assert.match(js,/if\(existing.length\)throw Error/);
+ assert.match(js,/btn\.textContent='Đang gửi hồ sơ\.\.\.'/);
+});
+test('employer and admin changes confirm a persisted Supabase row',()=>{
+ const js=read('src/app.js');
+ assert.match(js,/update\(\{status:requested\}\).*?select\('id,status'\)\.single\(\)/s);
+ assert.match(js,/s\.value=previous;fail\(ex\)/);
+ assert.match(js,/update\(\{status:b\.dataset\.newstatus\}\)\.eq\('id',b\.dataset\.company\)\.select\('id,status'\)\.single\(\)/);
+ assert.match(js,/update\(\{status:b\.dataset\.newstatus\}\)\.eq\('id',b\.dataset\.job\)\.select\('id,status'\)\.single\(\)/);
+});
