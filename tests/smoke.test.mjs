@@ -29,7 +29,7 @@ test('production artifact excludes source, database and workflow files',()=>{
  execFileSync('node',['scripts/build-pages.mjs'],{stdio:'pipe'});
  const top=readdirSync('dist').sort();
  assert.deepEqual(top,['.nojekyll','app.html','config.public.js','index.html','src']);
- assert.deepEqual(readdirSync('dist/src'),['app.css','app.js','bookmarks.js','marketplace.js']);
+ assert.deepEqual(readdirSync('dist/src'),['account-features.js','app.css','app.js','bookmarks.js','marketplace.js']);
  assert.ok(!existsSync('dist/supabase/schema.sql'));
 });
 
@@ -157,4 +157,28 @@ test('recruiter applicant filtering and file upload feedback remain scoped',()=>
  for(const id of ['applicantSearch','applicantFilter','applicantCount','candidateCVFile','cvFileHint'])assert.ok(main.includes(id),id);
  assert.match(main,/const match=\(!status\|\|app\.status===status\)/);
  assert.match(main,/createSignedUrl\(b\.dataset\.cv,60\)/);
+});
+
+test('private account features are user-bound and do not request service credentials',()=>{
+ const code=read('src/account-features.js');
+ for(const table of ['candidate_documents','applications','job_alert_preferences','jobs'])assert.ok(code.includes("'"+table+"'"),table);
+ assert.match(code,/\.eq\('user_id',user\.id\)/);
+ assert.match(code,/createSignedUrl\(path,60\)/);
+ assert.match(code,/getRole\(\)!=='candidate'/);
+ assert.ok(!code.includes('service_role'));
+});
+test('saved jobs are synchronized on login, not shared between accounts',()=>{
+ const app=read('src/app.js'),market=read('src/marketplace.js');
+ assert.match(app,/from\('saved_jobs'\)/);
+ assert.match(app,/ignoreDuplicates:true/);
+ assert.match(app,/marketplace\.setCloudSaved\(null,\[\]\)/);
+ assert.match(market,/onCloudSave\(id,desired,cloudOwner\)/);
+ assert.match(market,/setCloudSaved\(owner,ids\)/);
+});
+test('company public profile exposes only approved company metadata',()=>{
+ const market=read('src/marketplace.js'),app=read('src/app.js');
+ for(const prop of ['website','company_size','founded_year','benefits','industry'])assert.ok(market.includes(prop),prop);
+ assert.match(market,/\.eq\('status','approved'\)/);
+ assert.match(market,/function safeWebsite\(value\)/);
+ assert.match(app,/employerProfileForm/);
 });

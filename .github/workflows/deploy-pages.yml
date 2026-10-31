@@ -20,6 +20,7 @@ jobs:
           node --input-type=module --check < src/app.js
           node --check src/marketplace.js
           node --check src/bookmarks.js
+          node --check src/account-features.js
       - name: Automated smoke tests and privacy checks
         run: |
           node --test tests/smoke.test.mjs
