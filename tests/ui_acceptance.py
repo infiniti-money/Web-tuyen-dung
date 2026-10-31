@@ -134,6 +134,7 @@ def test_public_detail(browser):
             raise
         assert ORG in page.locator(".company-profile-hero h1").inner_text()
         assert TITLE in page.locator(".company-job-grid").inner_text()
+        assert page.locator("#viewCompanyJobs").is_visible()
         no_horizontal_overflow(page)
         page.screenshot(path=str(ARTIFACTS/"company-profile-mobile.png"),full_page=True)
         # Opening a company deep link in a new page must also succeed.
