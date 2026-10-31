@@ -29,7 +29,7 @@ test('production artifact excludes source, database and workflow files',()=>{
  execFileSync('node',['scripts/build-pages.mjs'],{stdio:'pipe'});
  const top=readdirSync('dist').sort();
  assert.deepEqual(top,['.nojekyll','app.html','config.public.js','index.html','src']);
- assert.deepEqual(readdirSync('dist/src'),['app.css','app.js']);
+ assert.deepEqual(readdirSync('dist/src'),['app.css','app.js','marketplace.js']);
  assert.ok(!existsSync('dist/supabase/schema.sql'));
 });
 
@@ -69,10 +69,45 @@ test('responsive application has dedicated stylesheet, visible navigation and ac
 });
 test('live job search and dashboard rely on actual Supabase records, never demo arrays',()=>{
  const js=read('src/app.js');
- assert.match(js,/\.from\('jobs'\)\.select/);
- assert.match(js,/\.eq\('status','published'\)/);
+ const marketplace=read('src/marketplace.js');
+ assert.match(js+marketplace,/\.from\('jobs'\)\.select/);
+ assert.match(marketplace,/\.eq\('status','published'\)/);
  assert.match(js,/\.rpc\('employer_applications'\)/);
  assert.match(js,/class="stats-grid"/);
  assert.match(js,/class="table-wrap"/);
  assert.match(js,/data-page/);
+});
+
+test('marketplace uses published jobs and approved company profiles only',()=>{
+ const m=read('src/marketplace.js');
+ assert.match(m,/\.eq\('status','published'\)/);
+ assert.match(m,/\.eq\('status','approved'\)/);
+ assert.match(m,/async function jobDetail\(id\)/);
+ assert.match(m,/async function companyProfile\(id\)/);
+ assert.match(m,/const uuid=/);
+ assert.match(m,/if\(!uuid\.test\(id\)\)/);
+});
+test('search offers advanced filters, sorting and bounded pagination',()=>{
+ const m=read('src/marketplace.js');
+ for(const name of ['search','region','industry','salary','sort','clearFilters','resultCount','pagination'])
+   assert.ok(m.includes("'"+name+"'")||m.includes('id="'+name+'"'),name);
+ assert.match(m,/pageSize=12/);
+ assert.match(m,/for\(let start=0;start<max;start\+=size\)/);
+ assert.match(m,/limit\(100\)/);
+});
+test('application routes to published job and approved company details',()=>{
+ const main=read('src/app.js'),m=read('src/marketplace.js');
+ assert.match(main,/createMarketplace\(/);
+ assert.match(main,/marketplace\.jobDetail/);
+ assert.match(main,/marketplace\.companyProfile/);
+ assert.match(main,/hashchange/);
+ assert.match(m,/href="#job\//);
+ assert.match(m,/href="#company\//);
+});
+test('admin moderation dashboard is search/filter oriented and keeps confirmed writes',()=>{
+ const main=read('src/app.js');
+ for(const field of ['adminSearch','companyFilter','jobFilter','adminCompanies','adminJobs'])
+   assert.ok(main.includes(field),field);
+ assert.match(main,/statCard\('Tin chờ duyệt'/);
+ assert.match(main,/update\(\{status:b\.dataset\.newstatus\}\).*?\.select\('id,status'\)\.single\(\)/s);
 });

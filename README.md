@@ -12,6 +12,13 @@
 - `supabase/schema.sql`: Cơ sở dữ liệu và chính sách truy cập RLS.
 - `docs/DEPLOY.md`: Hướng dẫn xuất bản, quản trị và kiểm thử.
 
+## Giao diện Marketplace nâng cao
+
+- Trang tìm việc `app.html#jobs` có bộ lọc ngành nghề, địa bàn, mức lương, sắp xếp và phân trang.
+- Trang chi tiết công việc `app.html#job/<uuid>` và hồ sơ doanh nghiệp công khai `app.html#company/<uuid>`.
+- Dashboard Admin có số liệu nghiệp vụ và hàng đợi duyệt doanh nghiệp/tin với tìm kiếm theo trạng thái.
+- Chi tiết phạm vi và giới hạn hiện tại: [docs/MARKETPLACE-UPGRADE.md](docs/MARKETPLACE-UPGRADE.md).
+
 ## Chức năng chính
 
 1. Đăng ký tài khoản bằng email, phân quyền ứng viên hoặc nhà tuyển dụng; vai trò admin chỉ do quản trị hệ thống cấp.
