@@ -1,0 +1,59 @@
+name: Publish consolidated Hưng Yên Jobs v2.0.0
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/releases/v2.0.0.md'
+      - '.github/workflows/publish-v2-release.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release:
+    name: Build verified public website ZIP and create GitHub Release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test recruitment website and build public files
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module --check < src/app.js
+          node --test tests/smoke.test.mjs
+          node scripts/build-pages.mjs
+          test -f dist/index.html
+          test -f dist/app.html
+          test -f dist/sw.js
+          test ! -e dist/supabase
+          test ! -e dist/.github
+      - name: Build archived public site and SHA-256 checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd dist && zip -q -r ../hung-yen-jobs-v2.0.0-site.zip .)
+          sha256sum hung-yen-jobs-v2.0.0-site.zip > hung-yen-jobs-v2.0.0-site.zip.sha256
+      - name: Publish versioned official release (once)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view v2.0.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "v2.0.0 release already exists; preserving it unchanged."
+            exit 0
+          fi
+          gh release create v2.0.0 \
+            hung-yen-jobs-v2.0.0-site.zip \
+            hung-yen-jobs-v2.0.0-site.zip.sha256 \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Hưng Yên Jobs v2.0.0 — Bản phát hành chính thức" \
+            --notes-file docs/releases/v2.0.0.md \
+            --latest
+          gh release view v2.0.0 --repo "$GITHUB_REPOSITORY" --json url,tagName,isDraft,isPrerelease

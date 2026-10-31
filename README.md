@@ -1,7 +1,9 @@
 # Hưng Yên Jobs — Nền tảng tuyển dụng khu vực Hưng Yên
 
-**Phiên bản:** v2 · Supabase PostgreSQL + Auth + Storage + Row Level Security  
+**Phiên bản chính thức:** v2.0.0 · GitHub Pages + Supabase PostgreSQL, Auth, Storage và RLS  
 **Supabase project:** `hung-yen-jobs` · Singapore · `lxarzbxymgjomsztftqj`
+
+[**Ghi chú phát hành v2.0.0**](docs/releases/v2.0.0.md) · [**Website đang chạy**](https://infiniti-money.github.io/Web-tuyen-dung/app.html)
 
 ## Giao diện
 
@@ -29,14 +31,14 @@
 
 ## Nâng cấp trải nghiệm ngày 31/10/2026
 
-- Ứng viên và khách có thể **lưu/bỏ lưu việc làm yêu thích** tại `app.html#saved`. Danh sách lưu cục bộ trong trình duyệt, chỉ chứa mã UUID công việc và **không đồng bộ thiết bị**. Tin đã đóng không hiển thị trong trang đã lưu.
+- Ứng viên và khách có thể **lưu/bỏ lưu việc làm yêu thích** tại `app.html#saved`. Khách chưa đăng nhập lưu cục bộ theo thiết bị; khi đăng nhập dấu trang được chuyển vào tài khoản Supabase và có thể đồng bộ trên thiết bị khác. Tin đã đóng không hiển thị trong trang đã lưu.
 - **Chia sẻ tin** bằng trình chia sẻ của thiết bị (nếu hỗ trợ) hoặc sao chép liên kết.
 - **Lọc nhanh theo ngành** trực tiếp từ danh mục ngành của các tin đang tuyển.
 - **Nhà tuyển dụng tìm kiếm và lọc hồ sơ nhận được** theo tên/vị trí/trạng thái, dữ liệu tiếp tục qua Supabase RLS.
 - Tăng cường thao tác di động và hiển thị tên/dung lượng tệp PDF được chọn trước khi gửi.
 - CI Playwright chạy trên bản build **của chính PR** tại máy chủ tĩnh cục bộ, kiểm thử UI mobile. Kiểm thử Admin/Nhà tuyển dụng dùng tài khoản **mô phỏng**, không phải đăng nhập bằng tài khoản thật.
 
-Không thêm bảng mới, không thay đổi tài khoản, CV, quyền truy cập, hay dữ liệu ứng tuyển hiện tại. Lưu việc làm trong trình duyệt không phải lưu trên server; xóa dữ liệu trình duyệt sẽ làm mất dấu trang.
+Lưu ý lịch sử: bản nâng cấp giao diện ban đầu chỉ dùng dấu trang tại thiết bị. Các bản nâng cấp tiếp theo đã bổ sung bảng `saved_jobs`, CV cá nhân và thông báo có RLS theo tài khoản. Không xóa dữ liệu ứng tuyển cũ trong các bản nâng cấp.
 
 ## Giao diện Marketplace nâng cao
 
@@ -58,7 +60,7 @@ Không thêm bảng mới, không thay đổi tài khoản, CV, quyền truy c�
 
 - Database Supabase và migrations đã hoạt động; Storage `candidate-cvs` là private. Security Advisor còn cảnh báo **Leaked Password Protection chưa bật**.
 - Giao diện đã có cấu hình Supabase trên nhánh `main`.
-- GitHub Actions kiểm tra cú pháp và chuẩn bị tự xuất bản bằng Pages.
+- GitHub Actions kiểm thử và tự động xuất bản website lên Pages từ nhánh `main`.
 - **GitHub Pages đã triển khai thành công**. Đã kiểm thử trực tiếp quy trình Admin duyệt doanh nghiệp/tin, ứng viên nộp CV PDF, Nhà tuyển dụng mở CV và chuyển trạng thái `reviewing`.
 - Tài khoản Admin đã được cấp quyền và có thể phê duyệt thực tế. Xác minh email qua SMTP iCloud đã hoạt động trong lượt thử.
 - **Chưa coi là production-ready** cho người dùng đại trà: cần chính sách quyền riêng tư/retention, backup và phục hồi, chống spam, kiểm thử đa trình duyệt; xem `docs/QA-ACCEPTANCE.md`.
