@@ -4,15 +4,16 @@ const KEY='hung-yen-jobs:saved-jobs:v1';
 
 // Browser-only bookmarks: UUIDs, not CVs, account info, or credentials.
 // Remains local to this device/browser; intentionally not server-synced.
-export function createBookmarks(storage=globalThis.localStorage){
+export function createBookmarks(storage){
+  const getStorage=()=>{try{return storage||globalThis.localStorage}catch{return null}};
   function read(){
     try{
-      const value=JSON.parse(storage?.getItem(KEY)||'[]');
+      const value=JSON.parse(getStorage()?.getItem(KEY)||'[]');
       return Array.isArray(value)?[...new Set(value.filter(v=>typeof v==='string'&&UUID_RE.test(v)))].slice(0,MAX_ITEMS):[];
     }catch{return []}
   }
   function write(values){
-    try{storage?.setItem(KEY,JSON.stringify(values));return true}catch{return false}
+    try{getStorage()?.setItem(KEY,JSON.stringify(values));return true}catch{return false}
   }
   function toggle(id){
     if(!UUID_RE.test(String(id)))return {saved:false,ok:false};
