@@ -28,8 +28,8 @@ test('RLS, scoped employer access and private storage configured',()=>{
 test('production artifact excludes source, database and workflow files',()=>{
  execFileSync('node',['scripts/build-pages.mjs'],{stdio:'pipe'});
  const top=readdirSync('dist').sort();
- assert.deepEqual(top,['.nojekyll','app.html','config.public.js','index.html','src']);
- assert.deepEqual(readdirSync('dist/src'),['account-features.js','push-notifications.js','app.css','app.js','bookmarks.js','marketplace.js']);
+ assert.deepEqual(top,['.nojekyll','app.html','config.notifications.js','config.public.js','index.html','manifest.webmanifest','src','sw.js']);
+ assert.deepEqual(readdirSync('dist/src'),['account-features.js','app.css','app.js','bookmarks.js','marketplace.js','push-notifications.js']);
  assert.ok(!existsSync('dist/supabase/schema.sql'));
 });
 
