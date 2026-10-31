@@ -35,7 +35,8 @@ test('delivery is opt-in and unique per user job and channel',()=>{
  assert.match(sql,/push_opt_in boolean not null default false/);
  assert.match(sql,/unique\(user_id,job_id,channel\)/);
  assert.match(sql,/revoke all on public.job_notification_deliveries from public,anon,authenticated/);
- assert.match(fn,/pref\[channel\+"_opt_in"\]!==true/);
+ assert.match(fn,/pref\.email_opt_in!==true/);
+ assert.match(fn,/pref\.push_opt_in!==true/);
  assert.match(fn,/email_confirmed_at/);
  assert.match(fn,/isKnownPushEndpoint/);
  assert.match(fn,/status:"processing"/);
