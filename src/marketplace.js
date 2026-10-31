@@ -150,7 +150,7 @@ export function createMarketplace({db,root,request,e,heading,onApply}){
       '<div class="detail-layout"><div class="panel detail-primary"><h2>Giới thiệu doanh nghiệp</h2>'+
       '<div class="long-copy">'+e(company.description||'Doanh nghiệp chưa cập nhật phần giới thiệu. Vui lòng xem các vị trí đang tuyển phía dưới.')+'</div>'+
       '<div class="results-heading"><h2>Vị trí đang tuyển</h2><span class="result-count">'+companyJobs.length+' công việc</span></div>'+
-      '<div class="company-job-grid">'+companyJobs.map(jobCard).join('')||empty('Doanh nghiệp chưa có vị trí đang tuyển')+'</div></div>'+
+      '<div class="company-job-grid">'+(companyJobs.length?companyJobs.map(jobCard).join(''):empty('Doanh nghiệp chưa có vị trí đang tuyển'))+'</div></div>'+
       '<aside class="detail-aside"><div class="panel"><h2>Thông tin tuyển dụng</h2>'+
       '<div class="company-summary-number">'+companyJobs.length+'</div><p class="muted">Tin tuyển dụng đã xuất bản</p>'+
       '<button id="viewCompanyJobs" type="button" class="wide-button">Tìm việc tại doanh nghiệp →</button></div></aside></div>';
