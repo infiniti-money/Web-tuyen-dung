@@ -376,3 +376,41 @@ tr[hidden]{display:none!important}
  .job-top .job-main{min-width:170px}
  .marketplace-job .save-job{margin:0}
 }
+
+
+/* Account features: alert preferences, CV library and enriched employer profiles */
+.cv-library-list,.alert-job-list{display:flex;flex-direction:column;gap:12px}
+.cv-library-item,.alert-job-item{display:flex;justify-content:space-between;align-items:center;gap:18px;
+ background:#f9fcff;border:1px solid var(--line);padding:17px 19px;border-radius:13px}
+.cv-library-item strong,.alert-job-item strong{display:block;color:var(--heading);font-size:13px;overflow-wrap:anywhere}
+.cv-library-item p{margin:6px 0 0}
+.cv-library-item button,.alert-job-item button{min-height:36px;padding:8px 13px}
+.cv-library-item .inline-actions{justify-content:flex-end;flex-shrink:0}
+.alert-job-item{text-decoration:none;transition:transform .2s,background-color .2s,border-color .2s}
+.alert-job-item:hover{background:#f1f9ff;border-color:#acd4ec;transform:translateY(-1px);text-decoration:none}
+.alert-job-item span:not(.badge){font-size:11px;color:#678398}
+.alert-job-item .badge{margin-left:auto}
+.account-quick-links{display:grid;gap:11px;margin-top:16px;padding-top:18px;border-top:1px solid var(--line)}
+.account-quick-links a{font-size:12px;font-weight:750;color:var(--primary)}
+.company-facts{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin:8px 0 20px}
+.company-facts .pill{padding:9px 13px}
+#employerProfileForm{max-width:100%}
+#employerProfileForm textarea{min-height:94px}
+#employerProfileForm .form-row{gap:14px}
+#cvLibraryForm{max-width:500px}
+#cvLibraryHint{margin:-10px 0 20px}
+#alertPrefsForm{max-width:810px}
+@media(max-width:700px){
+ .primary-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
+ .primary-nav .nav-link{padding:9px 2px;font-size:9px;letter-spacing:-.25px;gap:2px}
+ .primary-nav .nav-icon{font-size:12px}
+ .cv-library-item{align-items:flex-start;flex-direction:column}
+ .cv-library-item .inline-actions{width:100%;justify-content:flex-start}
+ .alert-job-item{align-items:flex-start;flex-direction:column}
+ .alert-job-item .badge{margin-left:0}
+}
+@media(max-width:390px){
+ .primary-nav .nav-icon{display:none}
+ .primary-nav .nav-link{font-size:8.5px}
+ .header-inner{padding-inline:10px}
+}
