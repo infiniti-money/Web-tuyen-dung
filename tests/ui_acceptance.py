@@ -92,6 +92,8 @@ def test_mobile_filters(browser, width, height):
         # Real dropdown interactions on mobile viewport
         page.locator("#industry").select_option(label="Kho vận")
         assert page.locator("#resultCount").inner_text().strip() == "1"
+        page.locator("#region").select_option(label="Mỹ Hào, Hưng Yên")
+        assert page.locator("#resultCount").inner_text().strip() == "1"
         page.locator("#salary").select_option("ge25")
         assert page.locator("#resultCount").inner_text().strip() == "0"
         page.locator("#salary").select_option("10to15")
