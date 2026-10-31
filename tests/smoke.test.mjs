@@ -115,3 +115,10 @@ test('admin moderation dashboard is search/filter oriented and keeps confirmed w
 test('marketplace JavaScript module parses in Node 22',()=>{
  execFileSync('node',['--check','src/marketplace.js'],{stdio:'pipe'});
 });
+
+test('company page renders job cards or empty state without swallowing sidebar markup',()=>{
+ const module=read('src/marketplace.js');
+ assert.match(module,/companyJobs\.length\?companyJobs\.map\(jobCard\)\.join\(''\):empty\(/);
+ assert.match(module,/<button id="viewCompanyJobs"/);
+ assert.ok(!module.includes("companyJobs.map(jobCard).join('')||empty("));
+});
