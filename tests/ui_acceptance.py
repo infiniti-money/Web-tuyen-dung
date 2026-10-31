@@ -187,6 +187,67 @@ def test_admin_visual_mock(browser):
         assert not async_errors, async_errors
     finally:context.close()
 
+# Separate isolated employer scenario; uses synthetic data, no real credentials or writes.
+EMPLOYER_MOCK = (ADMIN_MOCK
+    .replace("owner_id:'fake-owner'", "owner_id:ADMIN")
+    .replace("role:'admin'", "role:'employer'")
+    .replace("rpc:async()=>({data:[],error:null})", """rpc:async()=>({data:[{
+      id:'fe100000-0000-4000-8000-000000000056',
+      job_id:'6b11db28-62f5-48f3-91d7-404a356cf31d',
+      full_name:'Ứng viên thử nghiệm',status:'reviewing',
+      cover_letter:'Hồ sơ mô phỏng kiểm thử bộ lọc',cv_path:null
+    }],error:null})"""))
+
+def test_saved_jobs_mobile(browser):
+    context=browser.new_context(viewport={"width":390,"height":844},is_mobile=True,
+                                has_touch=True,device_scale_factor=1)
+    page=context.new_page()
+    try:
+        page.goto(BASE+"#jobs",wait_until="domcontentloaded",timeout=65000)
+        wait_ready(page,"#list [data-save]")
+        page.locator("#list [data-save]").first.click()
+        assert page.locator("#savedCounter").inner_text()=="1"
+        assert page.locator("#savedSummary").inner_text()=="1"
+        page.locator('a[href="#saved"]').first.click()
+        wait_ready(page,"#savedList .job")
+        assert TITLE in page.locator("#savedList").inner_text()
+        page.reload(wait_until="domcontentloaded")
+        wait_ready(page,"#savedList .job")
+        assert TITLE in page.locator("#savedList").inner_text()
+        assert page.locator("#savedCounter").inner_text()=="1"
+        page.locator('#savedList [data-save]').first.click()
+        wait_ready(page,'.empty-state')
+        assert page.locator("#savedCounter").inner_text()=="0"
+        no_horizontal_overflow(page)
+        page.screenshot(path=str(ARTIFACTS/"saved-jobs-mobile.png"),full_page=True)
+    finally:context.close()
+
+def test_employer_review_filters_mock(browser):
+    context=browser.new_context(viewport={"width":390,"height":844},
+                                is_mobile=True,has_touch=True)
+    page=context.new_page()
+    errors=[]
+    page.on("pageerror",lambda ex:errors.append(str(ex)))
+    page.route("**/esm.sh/@supabase/supabase-js@2.75.0*",
+      lambda route:route.fulfill(status=200,content_type="text/javascript",
+        headers={"access-control-allow-origin":"*"},body=EMPLOYER_MOCK))
+    try:
+        page.goto(BASE+"?qa_recruiter=1#dashboard",wait_until="domcontentloaded",timeout=65000)
+        wait_ready(page,"#applicantSearch")
+        assert page.locator("#applicantCount").inner_text()=="1 / 1 hồ sơ"
+        page.locator("#applicantFilter").select_option("submitted")
+        assert page.locator("#applicantCount").inner_text()=="0 / 1 hồ sơ"
+        page.locator("#applicantFilter").select_option("reviewing")
+        assert page.locator("#applicantCount").inner_text()=="1 / 1 hồ sơ"
+        page.locator("#applicantSearch").fill("ho-so-khong-ton-tai")
+        assert page.locator("#applicantCount").inner_text()=="0 / 1 hồ sơ"
+        page.locator("#applicantSearch").fill("")
+        assert page.locator("#applicantCount").inner_text()=="1 / 1 hồ sơ"
+        no_horizontal_overflow(page)
+        page.screenshot(path=str(ARTIFACTS/"employer-applicant-filters-mobile.png"),full_page=True)
+        assert not errors,errors
+    finally:context.close()
+
 def main():
     with sync_playwright() as p:
         browser=p.chromium.launch(headless=True,args=["--no-sandbox"])
@@ -201,6 +262,10 @@ def main():
                   lambda:test_invalid_detail(browser))
             check("Admin moderation filter UI — mocked authenticated admin",
                   lambda:test_admin_visual_mock(browser))
+            check("Saved jobs persist across mobile reload and can be removed",
+                  lambda:test_saved_jobs_mobile(browser))
+            check("Employer applicant search/status filters — isolated mock",
+                  lambda:test_employer_review_filters_mock(browser))
         finally:
             browser.close()
     (ARTIFACTS/"results.json").write_text(
