@@ -1,5 +1,6 @@
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.75.0';
 import {createMarketplace} from './marketplace.js';
+import {createAccountFeatures} from './account-features.js';
 const cfg=window.HYJOBS_CONFIG||{},valid=/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.url||'')&&!String(cfg.anonKey||'').includes('YOUR_');
 const db=valid?createClient(cfg.url,cfg.anonKey):null;
 const root=document.querySelector('#root'), e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10,12 +11,32 @@ const statusLabels={draft:'Bản nháp',pending:'Chờ duyệt',approved:'Đã d
 const badge=status=>'<span class="badge '+e(status)+'">'+e(statusLabels[status]||status)+'</span>';
 const heading=(eyebrow,title,subtitle)=>'<div class="page-heading"><span class="eyebrow">✦ '+e(eyebrow)+'</span><h1>'+e(title)+'</h1><p>'+e(subtitle)+'</p></div>';
 const statCard=(title,value,note)=>'<div class="stat-card"><span class="stat-label">'+e(title)+'</span><strong>'+e(value)+'</strong><small>'+e(note)+'</small></div>';
-const marketplace=createMarketplace({db,root,request,e,heading,onApply:apply,onMessage:note});
+const marketplace=createMarketplace({db,root,request,e,heading,onApply:apply,onMessage:note,onCloudSave:async(id,saved,owner)=>{
+  if(!user||user.id!==owner)throw Error('Phiên đăng nhập đã thay đổi. Hãy tải lại trang.');
+  if(saved)await request(db.from('saved_jobs').insert({user_id:owner,job_id:id}));
+  else await request(db.from('saved_jobs').delete().eq('user_id',owner).eq('job_id',id));
+}});
+const accountFeatures=createAccountFeatures({db,root,request,e,heading,note,getUser:()=>user,getRole:()=>profile?.role});
+let syncedAccount=null;
+async function syncSavedAccount(){
+  if(!user){marketplace.setCloudSaved(null,[]);syncedAccount=null;return}
+  if(user.id===syncedAccount)return;
+  // Migrate anonymous local bookmarks once. Server wins for subsequent account sessions.
+  const pending=marketplace.bookmarks.all();
+  if(pending.length){
+    const rows=pending.map(job_id=>({user_id:user.id,job_id}));
+    await request(db.from('saved_jobs').upsert(rows,{onConflict:'user_id,job_id',ignoreDuplicates:true}));
+  }
+  const saved=await request(db.from('saved_jobs').select('job_id').eq('user_id',user.id).order('created_at',{ascending:false}).limit(1000));
+  marketplace.setCloudSaved(user.id,saved.map(x=>x.job_id));
+  if(pending.length)marketplace.bookmarks.clear();
+  syncedAccount=user.id;
+}
 function note(x){let n=q('#alert');n.textContent=x;n.classList.add('show');setTimeout(()=>n.classList.remove('show'),4500)}
 function fail(err){if(err)note(err.message||String(err))}
 async function request(p){const {data,error}=await p;if(error)throw error;return data}
-async function session(){const {data}=await db.auth.getUser();user=data?.user||null;profile=user?await request(db.from('profiles').select('*').eq('id',user.id).single()):null;q('#accountLink').textContent=user?'Tài khoản':'Đăng nhập';q('#logoutBtn').classList.toggle('hidden',!user)}
-async function navigate(p){page=p;document.querySelectorAll('.nav-link').forEach(a=>{let active=a.dataset.page===p||((p.startsWith('job/')||p.startsWith('company/'))&&a.dataset.page==='jobs');a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});if(!db){root.innerHTML='<div class="panel"><h1>Chưa kết nối cơ sở dữ liệu</h1><p>Kiểm tra cấu hình Supabase publishable key của website.</p></div>';return}try{await session();if(p==='jobs')await jobs();else if(p==='saved')await marketplace.saved();else if(p==='account')await account();else if(p==='dashboard')await dashboard();else if(/^job\/[0-9a-f-]{36}$/i.test(p))await marketplace.jobDetail(p.slice(4));else if(/^company\/[0-9a-f-]{36}$/i.test(p))await marketplace.companyProfile(p.slice(8));else await jobs()}catch(ex){fail(ex);root.innerHTML='<div class="panel">Không thể tải dữ liệu. Vui lòng kiểm tra kết nối và cấu hình.</div>'}}
+async function session(){const {data}=await db.auth.getUser();user=data?.user||null;profile=user?await request(db.from('profiles').select('*').eq('id',user.id).single()):null;q('#accountLink').textContent=user?'Tài khoản':'Đăng nhập';q('#logoutBtn').classList.toggle('hidden',!user);await syncSavedAccount()}
+async function navigate(p){page=p;document.querySelectorAll('.nav-link').forEach(a=>{let active=a.dataset.page===p||((p.startsWith('job/')||p.startsWith('company/'))&&a.dataset.page==='jobs');a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});if(!db){root.innerHTML='<div class="panel"><h1>Chưa kết nối cơ sở dữ liệu</h1><p>Kiểm tra cấu hình Supabase publishable key của website.</p></div>';return}try{await session();if(p==='jobs')await jobs();else if(p==='saved')await marketplace.saved();else if(p==='alerts')await accountFeatures.alerts();else if(p==='cv')await accountFeatures.cv();else if(p==='account')await account();else if(p==='dashboard')await dashboard();else if(/^job\/[0-9a-f-]{36}$/i.test(p))await marketplace.jobDetail(p.slice(4));else if(/^company\/[0-9a-f-]{36}$/i.test(p))await marketplace.companyProfile(p.slice(8));else await jobs()}catch(ex){fail(ex);root.innerHTML='<div class="panel">Không thể tải dữ liệu. Vui lòng kiểm tra kết nối và cấu hình.</div>'}}
 async function jobs(){await marketplace.jobs()}
 async function account(){if(user){root.innerHTML=heading('Tài khoản cá nhân','Thông tin của tôi','Cập nhật hồ sơ và quản lý thông tin đăng nhập.')+'<div class="account-layout"><div class="panel"><div class="account-profile"><div class="account-avatar" aria-hidden="true">'+e(String(profile?.full_name||user.email||'H').charAt(0).toUpperCase())+'</div><div><strong>'+e(profile?.full_name||'Thành viên Hưng Yên Jobs')+'</strong><div class="muted">'+e(user.email)+'</div></div></div><p>Vai trò: <strong>'+e(roleLabels[profile?.role]||profile?.role)+'</strong></p><label for="fullName">Họ và tên</label><input id="fullName" value="'+e(profile?.full_name)+'"><button id="updateProfile">Lưu thông tin</button></div><aside class="panel soft"><h2>Trung tâm nghề nghiệp</h2><p class="muted">Theo dõi tin tuyển dụng, hồ sơ của bạn và các cập nhật mới nhất.</p><button class="secondary" id="goToDashboard" type="button">Đến bảng điều khiển →</button></aside></div>';q('#goToDashboard').onclick=()=>navigate('dashboard');q('#updateProfile').onclick=async()=>{try{await request(db.from('profiles').update({full_name:q('#fullName').value.trim()}).eq('id',user.id));note('Đã cập nhật')}catch(ex){fail(ex)}};return}
 root.innerHTML=heading('Đồng hành cùng bạn','Truy cập tài khoản','Quản lý tin tuyển dụng, hồ sơ ứng tuyển và thông tin nghề nghiệp của bạn.')+'<div class="auth-layout"><div class="panel"><div class="auth-icon" aria-hidden="true">↗</div><h2>Đăng nhập</h2><form id="login"><label>Email</label><input type="email" name="email" required autocomplete="email"><label>Mật khẩu</label><input type="password" name="password" required autocomplete="current-password" minlength="8"><button>Đăng nhập</button></form></div><div class="panel"><div class="auth-icon" aria-hidden="true">✦</div><h2>Tạo tài khoản</h2><form id="register"><label>Họ tên</label><input name="name" required maxlength="100"><label>Email</label><input type="email" name="email" required><label>Mật khẩu (ít nhất 8 ký tự)</label><input type="password" name="password" required minlength="8"><label>Đăng ký với vai trò</label><select name="role"><option value="candidate">Ứng viên</option><option value="employer">Nhà tuyển dụng</option></select><button>Tạo tài khoản</button></form><p class="auth-help">Xác minh email để bảo vệ tài khoản và bắt đầu sử dụng dịch vụ.</p><form class="sub-form" id="resendConfirmation"><h3>Chưa nhận được email xác minh?</h3><label>Email đã đăng ký</label><input type="email" name="email" autocomplete="email" required><button type="submit">Gửi lại email xác minh</button><p id="resendStatus" role="status" aria-live="polite" class="muted"></p></form></div></div>';
