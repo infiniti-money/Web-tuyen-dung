@@ -1,0 +1,26 @@
+name: Validate notification dispatcher and secrets boundary
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/functions/job-alert-dispatch/**'
+      - '.github/workflows/notification-qa.yml'
+      - 'tests/notification-security.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    name: Deno type check and fail-closed notification tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+          cache: true
+      - name: Type-check deployed Edge Function without any production secrets
+        run: deno check supabase/functions/job-alert-dispatch/index.ts
+      - name: Assert notification security and activation guardrails
+        run: node --test tests/notification-security.test.mjs
