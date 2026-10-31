@@ -50,9 +50,10 @@ function isKnownPushEndpoint(raw:string){
 function escapeHtml(s:unknown){
   return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));
 }
-function api<T>(data:{data:T,error:{message:string,code?:string}|null},label:string):T{
-  if(data.error)throw Error(label+": "+data.error.message);
-  return data.data;
+function api<T>(response:{data:T,error:{message:string,code?:string}|null},label:string):NonNullable<T>{
+  if(response.error)throw Error(label+": "+response.error.message);
+  if(response.data==null)throw Error(label+": empty_response");
+  return response.data as NonNullable<T>;
 }
 async function sendEmail(email:string,job:Record<string,unknown>){
   if(!resendToken||!fromEmail)throw Error("email_provider_not_configured");
@@ -123,8 +124,9 @@ Deno.serve(async(req:Request)=>{
         if(!matches(pref,work))continue;
         for(const channel of ["email","push"] as const){
           if(summary.claimed>=perRunLimit)break outer;
-          if(!configured[channel]||pref[channel+"_opt_in"]!==true)continue;
-          const since=pref[channel+"_opted_in_at"];
+          if(channel==="email"&&(!configured.email||pref.email_opt_in!==true))continue;
+          if(channel==="push"&&(!configured.push||pref.push_opt_in!==true))continue;
+          const since=channel==="email"?pref.email_opted_in_at:pref.push_opted_in_at;
           if(!since||new Date(String(job.published_at))<new Date(String(since)))continue;
           if(channel==="push"){
             const found=api(await db.from("web_push_subscriptions").select("endpoint,p256dh,auth_key")
@@ -150,8 +152,9 @@ Deno.serve(async(req:Request)=>{
                 .eq("user_id",pref.user_id).limit(8),"push_subscriptions");
               await sendPush(found,work);
             }
-            api(await db.from("job_notification_deliveries")
-              .update({status:"sent",sent_at:new Date().toISOString()}).eq("id",claim.data.id),"delivery_success");
+            const deliveryUpdate=await db.from("job_notification_deliveries")
+              .update({status:"sent",sent_at:new Date().toISOString()}).eq("id",claim.data.id);
+            if(deliveryUpdate.error)throw Error("delivery_success: "+deliveryUpdate.error.code);
             summary.sent++;
           }catch(error){
             const code=String((error as Error).message||"delivery_failed").slice(0,90);
