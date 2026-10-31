@@ -12,6 +12,17 @@
 - `supabase/schema.sql`: Cơ sở dữ liệu và chính sách truy cập RLS.
 - `docs/DEPLOY.md`: Hướng dẫn xuất bản, quản trị và kiểm thử.
 
+## Nâng cấp trải nghiệm ngày 31/10/2026
+
+- Ứng viên và khách có thể **lưu/bỏ lưu việc làm yêu thích** tại `app.html#saved`. Danh sách lưu cục bộ trong trình duyệt, chỉ chứa mã UUID công việc và **không đồng bộ thiết bị**. Tin đã đóng không hiển thị trong trang đã lưu.
+- **Chia sẻ tin** bằng trình chia sẻ của thiết bị (nếu hỗ trợ) hoặc sao chép liên kết.
+- **Lọc nhanh theo ngành** trực tiếp từ danh mục ngành của các tin đang tuyển.
+- **Nhà tuyển dụng tìm kiếm và lọc hồ sơ nhận được** theo tên/vị trí/trạng thái, dữ liệu tiếp tục qua Supabase RLS.
+- Tăng cường thao tác di động và hiển thị tên/dung lượng tệp PDF được chọn trước khi gửi.
+- CI Playwright chạy trên bản build **của chính PR** tại máy chủ tĩnh cục bộ, kiểm thử UI mobile. Kiểm thử Admin/Nhà tuyển dụng dùng tài khoản **mô phỏng**, không phải đăng nhập bằng tài khoản thật.
+
+Không thêm bảng mới, không thay đổi tài khoản, CV, quyền truy cập, hay dữ liệu ứng tuyển hiện tại. Lưu việc làm trong trình duyệt không phải lưu trên server; xóa dữ liệu trình duyệt sẽ làm mất dấu trang.
+
 ## Giao diện Marketplace nâng cao
 
 - Trang tìm việc `app.html#jobs` có bộ lọc ngành nghề, địa bàn, mức lương, sắp xếp và phân trang.

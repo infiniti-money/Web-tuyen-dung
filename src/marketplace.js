@@ -1,3 +1,5 @@
+import {createBookmarks} from './bookmarks.js';
+
 // Public marketplace uses published jobs and approved companies only.
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const pageSize=12;
@@ -20,8 +22,20 @@ function matchesSalary(job,band){
   if(band==='ge25')return (high??low)>=25;
   return true;
 }
-export function createMarketplace({db,root,request,e,heading,onApply}){
+export function createMarketplace({db,root,request,e,heading,onApply,onMessage=()=>{}}){
   let allJobs=null,loadedAt=0,filters=filterDefaults(),currentPage=1,selectedCompany='';
+  const bookmarks=createBookmarks();
+  const savedText=id=>bookmarks.has(id)?'♥ Đã lưu':'♡ Lưu tin';
+  const savedAction=id=>'<button type="button" class="save-job secondary" data-save="'+e(id)+'" aria-pressed="'+bookmarks.has(id)+'" aria-label="'+(bookmarks.has(id)?'Bỏ lưu tin':'Lưu tin tuyển dụng')+'">'+savedText(id)+'</button>';
+  function updateSavedCount(){for(const id of ['savedCounter','savedSummary']){const badge=document.getElementById(id);if(badge)badge.textContent=String(bookmarks.count())}}
+  async function loadJobs(){if(!allJobs||Date.now()-loadedAt>60000){allJobs=await fetchJobs();loadedAt=Date.now()}return allJobs}
+  function shareJob(id,title){
+    if(!uuid.test(id))return;
+    const url=window.location.origin+window.location.pathname+'#job/'+id;
+    if(navigator.share){navigator.share({title,url}).catch(error=>{if(error?.name!=='AbortError')onMessage('Không thể chia sẻ liên kết')});return}
+    if(navigator.clipboard?.writeText){navigator.clipboard.writeText(url).then(()=>onMessage('Đã sao chép liên kết việc làm')).catch(()=>onMessage('Không thể sao chép liên kết trên trình duyệt này'));return}
+    onMessage('Trình duyệt không hỗ trợ chia sẻ tự động. Bạn có thể sao chép liên kết trên thanh địa chỉ.')
+  }
   const norm=s=>String(s??'').normalize('NFC').toLocaleLowerCase('vi').trim();
   const link=(text,href,css='')=>'<a class="'+css+'" href="'+href+'">'+e(text)+'</a>';
   const empty=message=>'<div class="empty-state"><strong>'+e(message)+'</strong><p>Thử điều chỉnh bộ lọc hoặc quay lại danh sách việc làm.</p></div>';
@@ -44,18 +58,31 @@ export function createMarketplace({db,root,request,e,heading,onApply}){
     const name=job.companies?.name||'Doanh nghiệp Hưng Yên',initial=String(name).charAt(0).toUpperCase()||'H';
     return '<article class="job marketplace-job">'+
       '<div class="job-top"><div class="job-logo" aria-hidden="true">'+e(initial)+'</div><div class="job-main"><h3 class="job-title">'+link(job.title,'#job/'+job.id)+'</h3>'+
-      '<a class="job-company company-text-link" href="#company/'+e(job.company_id)+'">'+e(name)+'</a></div></div>'+
+      '<a class="job-company company-text-link" href="#company/'+e(job.company_id)+'">'+e(name)+'</a></div>'+savedAction(job.id)+'</div>'+
       '<p class="job-description">'+e(String(job.description||'').slice(0,175))+(String(job.description||'').length>175?'…':'')+'</p>'+
       '<div class="job-meta"><span class="pill">⌖ '+e(job.location)+'</span><span class="pill">◈ '+e(job.industry)+'</span><span class="pill salary">'+e(salaryLabel(job))+'</span></div>'+
       '<div class="job-actions"><span class="hint">Đăng '+e(new Date(job.created_at).toLocaleDateString('vi-VN'))+'</span><div class="inline-actions">'+
-      '<a class="button secondary" href="#job/'+e(job.id)+'">Xem chi tiết</a>'+
+      '<button type="button" class="share-job secondary" data-share="'+e(job.id)+'" data-title="'+e(job.title)+'" aria-label="Chia sẻ '+e(job.title)+'">↗ Chia sẻ</button><a class="button secondary" href="#job/'+e(job.id)+'">Xem chi tiết</a>'+
       '<button type="button" data-apply="'+e(job.id)+'">Ứng tuyển</button></div></div></article>';
   }
   function bindApply(){
     root.querySelectorAll('[data-apply]').forEach(button=>button.onclick=()=>onApply(button.dataset.apply));
+    root.querySelectorAll('[data-save]').forEach(button=>button.onclick=()=>{
+      const result=bookmarks.toggle(button.dataset.save);
+      if(!result.ok){onMessage('Không thể lưu việc làm trên trình duyệt này');return}
+      updateSavedCount();
+      root.querySelectorAll('[data-save="'+button.dataset.save+'"]').forEach(b=>{
+        b.setAttribute('aria-pressed',String(result.saved));b.textContent=savedText(button.dataset.save);
+        b.setAttribute('aria-label',result.saved?'Bỏ lưu tin':'Lưu tin tuyển dụng');
+      });
+      if(root.querySelector('#savedList'))saved().catch(()=>onMessage('Không thể làm mới danh sách đã lưu'));
+      else onMessage(result.saved?'Đã lưu tin tuyển dụng trên thiết bị':'Đã bỏ lưu tin tuyển dụng');
+    });
+    root.querySelectorAll('[data-share]').forEach(button=>button.onclick=()=>shareJob(button.dataset.share,button.dataset.title));
   }
   async function jobs(){
-    if(!allJobs||Date.now()-loadedAt>60000){allJobs=await fetchJobs();loadedAt=Date.now()}
+    await loadJobs();
+    updateSavedCount();
     const locations=[...new Set(allJobs.map(j=>j.location).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
     const industries=[...new Set(allJobs.map(j=>j.industry).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
     const currentCompany=selectedCompany&&allJobs.find(j=>j.company_id===selectedCompany)?.companies?.name;
@@ -64,7 +91,7 @@ export function createMarketplace({db,root,request,e,heading,onApply}){
       '<h1>Việc làm phù hợp.<br>Ứng tuyển dễ dàng.</h1><p>Lọc công việc theo ngành, mức lương và khu vực. Xem chi tiết trước khi gửi hồ sơ trực tiếp đến doanh nghiệp.</p>'+
       '<span class="hero-count"><b>'+allJobs.length+'</b> tin đang tuyển'+(allJobs.length>=1000?' (1000 tin mới nhất)':'')+'</span></section>'+
       '<section class="panel advanced-search" aria-label="Bộ lọc việc làm">'+
-      '<div class="advanced-search-head"><h2>Bộ lọc tìm việc</h2><div class="inline-actions"><button type="button" class="secondary" id="refreshJobs">↻ Làm mới</button><button type="button" class="secondary" id="clearFilters">Đặt lại bộ lọc</button></div></div>'+
+      '<div class="advanced-search-head"><h2>Bộ lọc tìm việc</h2><div class="inline-actions"><a class="button secondary" href="#saved">♥ Đã lưu (<span id="savedSummary">'+bookmarks.count()+'</span>)</a><button type="button" class="secondary" id="refreshJobs">↻ Làm mới</button><button type="button" class="secondary" id="clearFilters">Đặt lại bộ lọc</button></div></div>'+
       '<div class="advanced-fields"><div><label for="search">Vị trí hoặc doanh nghiệp</label><input type="search" id="search" maxlength="90" placeholder="Nhập chức danh, công ty..."></div>'+
       '<div><label for="region">Khu vực làm việc</label><select id="region">'+option('','Tất cả khu vực',filters.location)+locations.map(v=>option(v,v,filters.location)).join('')+'</select></div>'+
       '<div><label for="industry">Ngành nghề</label><select id="industry">'+option('','Tất cả ngành nghề',filters.industry)+industries.map(v=>option(v,v,filters.industry)).join('')+'</select></div>'+
@@ -73,7 +100,7 @@ export function createMarketplace({db,root,request,e,heading,onApply}){
         ['15to25','15 – 25 triệu'],['ge25','Từ 25 triệu'],['negotiable','Thỏa thuận']
       ].map(([v,t])=>option(v,t,filters.salary)).join('')+'</select></div></div>'+
       (currentCompany?'<div class="active-company-filter">Đang xem việc làm của <strong>'+e(currentCompany)+'</strong><button type="button" class="secondary" id="clearCompany">Bỏ lọc doanh nghiệp</button></div>':'')+
-      '</section><section class="marketplace-results" aria-label="Kết quả tuyển dụng">'+
+      '<div class="quick-filters"><span>Ngành nổi bật:</span>'+industries.slice(0,4).map(v=>'<button type="button" class="quick-filter'+(filters.industry===v?' active':'')+'" data-quick="'+e(v)+'">'+e(v)+'</button>').join('')+'</div></section><section class="marketplace-results" aria-label="Kết quả tuyển dụng">'+
       '<div class="results-heading"><div><span class="eyebrow">VIỆC LÀM ĐÃ DUYỆT</span><h2>Cơ hội mới nhất</h2><div class="result-count" aria-live="polite"><strong id="resultCount">0</strong> việc làm phù hợp</div></div>'+
       '<div><label for="sort">Sắp xếp</label><select id="sort">'+[
         ['newest','Mới nhất'],['oldest','Cũ nhất'],['salarydesc','Lương cao trước'],['salaryasc','Lương thấp trước']
@@ -82,6 +109,7 @@ export function createMarketplace({db,root,request,e,heading,onApply}){
     const input=root.querySelector('#search');input.value=filters.keyword;
     function draw(){
       const keyword=norm(filters.keyword);
+      root.querySelectorAll('[data-quick]').forEach(b=>{const selected=filters.industry===b.dataset.quick;b.classList.toggle('active',selected);b.setAttribute('aria-pressed',String(selected))});
       let visible=allJobs.filter(j=>
         (!keyword||norm([j.title,j.industry,j.description,j.companies?.name].join(' ')).includes(keyword))&&
         (!filters.location||j.location===filters.location)&&
@@ -106,13 +134,26 @@ export function createMarketplace({db,root,request,e,heading,onApply}){
         root.querySelector('.marketplace-results').scrollIntoView({behavior:'smooth',block:'start'});
       });
     }
+    root.querySelectorAll('[data-quick]').forEach(button=>button.onclick=()=>{filters.industry=filters.industry===button.dataset.quick?'':button.dataset.quick;root.querySelector('#industry').value=filters.industry;currentPage=1;draw()});
     input.oninput=()=>{filters.keyword=input.value;currentPage=1;draw()};
     for(const [id,key] of [['region','location'],['industry','industry'],['salary','salary'],['sort','sort']])
       root.querySelector('#'+id).onchange=event=>{filters[key]=event.target.value;currentPage=1;draw()};
     root.querySelector('#clearFilters').onclick=()=>{filters=filterDefaults();selectedCompany='';currentPage=1;return jobs()};
-    root.querySelector('#refreshJobs').onclick=()=>{allJobs=null;currentPage=1;jobs().catch(error=>{console.error('refresh jobs failed',error)})};
+    root.querySelector('#refreshJobs').onclick=()=>{allJobs=null;currentPage=1;jobs().catch(()=>onMessage('Không thể tải lại danh sách việc làm'))};
     if(root.querySelector('#clearCompany'))root.querySelector('#clearCompany').onclick=()=>{selectedCompany='';currentPage=1;jobs()};
     draw();
+  }
+
+  async function saved(){
+    await loadJobs();updateSavedCount();
+    const ids=bookmarks.all(),items=ids.map(id=>allJobs.find(j=>j.id===id)).filter(Boolean);
+    root.innerHTML=heading('Cơ hội yêu thích','Việc làm đã lưu','Các tin được lưu riêng trên trình duyệt thiết bị này, không đồng bộ với tài khoản trên thiết bị khác.')+
+      '<div class="saved-overview panel"><div><span class="eyebrow">DANH SÁCH CỦA BẠN</span><h2>'+items.length+' tin tuyển dụng còn hiệu lực</h2>'+
+      '<p class="muted">Chỉ hiển thị tin đang tuyển. Tin đã đóng sẽ không xuất hiện; liên kết chia sẻ vẫn kiểm tra quyền công khai.</p></div>'+
+      '<a href="#jobs" class="button">Khám phá việc làm →</a></div>'+
+      '<div id="savedList" class="job-grid saved-grid">'+(items.length?items.map(jobCard).join('')+
+      '':empty('Bạn chưa lưu công việc nào đang tuyển'))+'</div>';
+    bindApply();
   }
   async function jobDetail(id){
     if(!uuid.test(id)){root.innerHTML=empty('Đường dẫn công việc không hợp lệ');return}
@@ -124,7 +165,7 @@ export function createMarketplace({db,root,request,e,heading,onApply}){
     root.innerHTML='<div class="detail-breadcrumb">'+link('← Quay lại việc làm','#jobs')+'</div>'+
       '<div class="detail-layout"><article class="panel detail-primary">'+
       '<span class="eyebrow">TIN TUYỂN DỤNG ĐÃ KIỂM DUYỆT</span><h1>'+e(job.title)+'</h1>'+
-      '<div class="detail-company">'+link(company.name,'#company/'+e(company.id),'company-text-link')+'</div>'+
+      '<div class="detail-company">'+link(company.name,'#company/'+e(company.id),'company-text-link')+'</div><div class="detail-social-actions">'+savedAction(job.id)+'<button type="button" class="secondary" data-share="'+e(job.id)+'" data-title="'+e(job.title)+'">↗ Chia sẻ tin</button></div>'+
       '<div class="job-meta detail-chips"><span class="pill">⌖ '+e(job.location)+'</span><span class="pill">◈ '+e(job.industry)+'</span><span class="pill salary">'+e(salaryLabel(job))+'</span></div>'+
       '<h2>Giới thiệu công việc</h2><div class="long-copy">'+e(job.description||'Chưa có mô tả')+'</div>'+
       '<h2>Yêu cầu ứng viên</h2><div class="long-copy">'+e(job.requirements||'Nhà tuyển dụng chưa cập nhật yêu cầu chi tiết.')+'</div>'+
@@ -135,6 +176,7 @@ export function createMarketplace({db,root,request,e,heading,onApply}){
       '<p class="muted">⌖ '+e(company.location)+'</p><p>'+e(String(company.description||'').slice(0,180)||'Doanh nghiệp đã được kiểm duyệt trên Hưng Yên Jobs.')+'</p>'+
       link('Xem hồ sơ doanh nghiệp →','#company/'+e(company.id),'text-link')+'</div></aside></div>';
     root.querySelector('#detailApply').onclick=()=>onApply(job.id);
+    bindApply();
   }
   async function companyProfile(id){
     if(!uuid.test(id)){root.innerHTML=empty('Đường dẫn doanh nghiệp không hợp lệ');return}
@@ -157,5 +199,5 @@ export function createMarketplace({db,root,request,e,heading,onApply}){
     bindApply();
     root.querySelector('#viewCompanyJobs').onclick=()=>{selectedCompany=company.id;currentPage=1;location.hash='jobs'};
   }
-  return {jobs,jobDetail,companyProfile};
+  return {jobs,saved,jobDetail,companyProfile,bookmarks};
 }
