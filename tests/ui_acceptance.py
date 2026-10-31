@@ -248,6 +248,36 @@ def test_employer_review_filters_mock(browser):
         assert not errors,errors
     finally:context.close()
 
+
+# Isolated candidate render checks: Supabase client is mocked; no real personal data.
+CANDIDATE_MOCK = ADMIN_MOCK.replace("role:'admin'","role:'candidate'")
+
+def test_candidate_alert_and_cv_routes_mock(browser):
+    context=browser.new_context(viewport={"width":390,"height":844},
+                                is_mobile=True,has_touch=True)
+    page=context.new_page()
+    errors=[]
+    page.on("pageerror",lambda err:errors.append(str(err)))
+    page.route("**/esm.sh/@supabase/supabase-js@2.75.0*",
+       lambda route:route.fulfill(status=200,content_type="text/javascript",
+         headers={"access-control-allow-origin":"*"},body=CANDIDATE_MOCK))
+    try:
+        page.goto(BASE+"?qa_candidate=1#alerts",wait_until="domcontentloaded",timeout=65000)
+        wait_ready(page,"#alertPrefsForm")
+        assert page.get_by_text("Thông báo việc làm phù hợp").is_visible()
+        assert page.locator("#alertKeyword").count()==1
+        assert page.locator("#alertSalary").count()==1
+        no_horizontal_overflow(page)
+        page.screenshot(path=str(ARTIFACTS/"alerts-mobile-mocked.png"),full_page=True)
+        page.goto(BASE+"?qa_candidate=1#cv",wait_until="domcontentloaded",timeout=65000)
+        wait_ready(page,"#cvLibraryForm")
+        assert page.locator("#cvLibraryInput").count()==1
+        assert "CV của tôi" in page.locator("#root").inner_text()
+        no_horizontal_overflow(page)
+        page.screenshot(path=str(ARTIFACTS/"cv-library-mobile-mocked.png"),full_page=True)
+        assert not errors,errors
+    finally:context.close()
+
 def main():
     with sync_playwright() as p:
         browser=p.chromium.launch(headless=True,args=["--no-sandbox"])
@@ -266,6 +296,8 @@ def main():
                   lambda:test_saved_jobs_mobile(browser))
             check("Employer applicant search/status filters — isolated mock",
                   lambda:test_employer_review_filters_mock(browser))
+            check("Candidate CV library and job alerts — isolated account mock",
+                  lambda:test_candidate_alert_and_cv_routes_mock(browser))
         finally:
             browser.close()
     (ARTIFACTS/"results.json").write_text(
