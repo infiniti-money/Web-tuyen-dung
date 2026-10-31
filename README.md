@@ -12,6 +12,14 @@
 - `supabase/schema.sql`: Cơ sở dữ liệu và chính sách truy cập RLS.
 - `docs/DEPLOY.md`: Hướng dẫn xuất bản, quản trị và kiểm thử.
 
+## Tính năng hồ sơ ứng viên và doanh nghiệp nâng cao
+
+- **Đồng bộ việc làm đã lưu theo tài khoản:** chuyển dấu trang ẩn danh khi đăng nhập; dữ liệu sau đó nằm trong Supabase với quyền riêng theo tài khoản.
+- **Thông báo việc làm phù hợp:** mục `#alerts` lưu từ khóa, địa điểm, ngành nghề và mức lương; hiển thị gợi ý và tin mới ngay trong website. **Chưa có email hoặc push tự động.**
+- **Thư viện CV cá nhân:** mục `#cv` cho phép ứng viên tải/xem/xóa CV chưa được sử dụng và chọn lại CV khi nộp hồ sơ. CV gắn đơn ứng tuyển được giữ an toàn.
+- **Hồ sơ doanh nghiệp:** thêm ngành nghề, quy mô, năm thành lập, website HTTPS, phúc lợi; các thông tin chính đã được phê duyệt vẫn cần Admin xử lý nếu thay đổi.
+- Chi tiết bảo mật, giới hạn và hướng dẫn: [docs/ACCOUNT_FEATURES_20261031.md](docs/ACCOUNT_FEATURES_20261031.md).
+
 ## Nâng cấp trải nghiệm ngày 31/10/2026
 
 - Ứng viên và khách có thể **lưu/bỏ lưu việc làm yêu thích** tại `app.html#saved`. Danh sách lưu cục bộ trong trình duyệt, chỉ chứa mã UUID công việc và **không đồng bộ thiết bị**. Tin đã đóng không hiển thị trong trang đã lưu.
