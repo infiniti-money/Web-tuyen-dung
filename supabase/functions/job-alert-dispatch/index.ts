@@ -144,7 +144,9 @@ Deno.serve(async(req:Request)=>{
           summary.claimed++;
           try{
             if(channel==="email"){
-              const acct=api(await db.auth.admin.getUserById(String(pref.user_id)),"auth_user").user;
+              const accountResponse=await db.auth.admin.getUserById(String(pref.user_id));
+              if(accountResponse.error)throw Error("auth_lookup_failed");
+              const acct=accountResponse.data.user;
               if(!acct?.email||!acct.email_confirmed_at)throw Error("email_not_verified");
               await sendEmail(acct.email,work);
             }else{
