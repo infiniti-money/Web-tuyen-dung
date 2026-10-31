@@ -209,7 +209,8 @@ test('all dispatched messages are opted in, deduplicated and secret protected',(
  const migration=read('supabase/migrations/20261031071529_opt_in_job_email_webpush_foundation.sql');
  const workflow=read('.github/workflows/dispatch-job-alerts.yml');
  assert.match(backend,/equalToken\(req\.headers\.get\("x-alert-job-secret"\)/);
- assert.match(backend,/pref\[channel\+"_opt_in"\]!==true/);
+ assert.match(backend,/pref\.email_opt_in!==true/);
+ assert.match(backend,/pref\.push_opt_in!==true/);
  assert.match(backend,/job_notification_deliveries/);
  assert.match(backend,/email_confirmed_at/);
  assert.match(backend,/isKnownPushEndpoint/);
