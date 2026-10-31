@@ -26,5 +26,6 @@ export function createBookmarks(storage){
     return {saved:true,ok:write(next),count:next.length};
   }
   function has(id){return read().includes(id)}
-  return {all:read,has,toggle,count:()=>read().length};
+  function clear(){return write([])}
+  return {all:read,has,toggle,clear,count:()=>read().length};
 }
