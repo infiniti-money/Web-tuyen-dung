@@ -16,7 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check JavaScript syntax
-        run: node --input-type=module --check < src/app.js
+        run: |
+          node --input-type=module --check < src/app.js
+          node --check src/marketplace.js
       - name: Automated smoke tests and privacy checks
         run: |
           node --test tests/smoke.test.mjs
