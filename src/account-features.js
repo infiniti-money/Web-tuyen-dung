@@ -1,4 +1,5 @@
 import {enableWebPush,disableWebPush,isPushConfigured,supportedPush} from './push-notifications.js';
+import {validateCvPdf} from './pdf-safety.js';
 // Candidate-facing account features. Opt-in channels are stored with RLS; no client sends.
 export function createAccountFeatures({db,root,request,e,heading,note,getUser,getRole}){
   const empty=(title,desc)=>'<div class="empty-state"><strong>'+e(title)+'</strong><p>'+e(desc)+'</p></div>';
@@ -47,10 +48,11 @@ export function createAccountFeatures({db,root,request,e,heading,note,getUser,ge
     root.querySelector('#cvLibraryForm').onsubmit=async ev=>{
       ev.preventDefault();const btn=ev.target.querySelector('button'),f=fileInput.files?.[0];
       if(!f){note('Vui lòng chọn CV');return}
-      if(f.type!=='application/pdf'||f.size>5242880||f.size<1){note('CV phải là PDF và không vượt quá 5 MB');return}
-      btn.disabled=true;btn.textContent='Đang tải CV...';
+      btn.disabled=true;btn.textContent='Đang kiểm tra CV...';
       const path=user.id+'/'+crypto.randomUUID()+'.pdf';
       try{
+        await validateCvPdf(f);
+        btn.textContent='Đang tải CV...';
         await request(db.storage.from('candidate-cvs').upload(path,f,{contentType:'application/pdf',upsert:false}));
         try{
           await request(db.from('candidate_documents').insert({user_id:user.id,file_path:path,original_name:f.name.slice(0,180),file_size:f.size}).select('id').single());
