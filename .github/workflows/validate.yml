@@ -20,6 +20,7 @@ jobs:
           node --check src/bookmarks.js
           node --check src/account-features.js
           node --check src/push-notifications.js
+          node --check src/pdf-safety.js
           node --check sw.js
           node --check scripts/build-pages.mjs
           node --test tests/smoke.test.mjs
