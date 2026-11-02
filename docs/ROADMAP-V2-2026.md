@@ -32,7 +32,8 @@ Cập nhật: **02/11/2026**. Nền tảng hiện tại: [GitHub Pages](https://
 ## v2.3 — Chống spam, quyền truy cập và tin cậy
 
 - [ ] Turnstile/CAPTCHA phù hợp GitHub Pages + Supabase, có xác minh phía máy chủ; không chỉ kiểm tra ở trình duyệt.
-- [ ] Rate limit và chống tạo nhiều đơn/hồ sơ, không làm gián đoạn luồng ứng tuyển hợp lệ.
+- [x] Giới hạn tần suất ở tầng PostgreSQL: 15 đơn/30 phút/ứng viên và 50 tin/24h/doanh nghiệp, có advisory lock và kiểm thử rollback.
+- [ ] Cần xác minh CAPTCHA/Turnstile phía máy chủ và bảo vệ đăng ký Auth trước bot, kết hợp giám sát/giới hạn IP.
 - [ ] Giải quyết Security Advisor `Leaked Password Protection Disabled` theo tính năng/gói Supabase thực tế.
 - [ ] Kiểm thử RLS theo Ứng viên, Nhà tuyển dụng, Admin, khách; signed URL hết hạn và phân quyền giữa doanh nghiệp.
 
