@@ -14,6 +14,13 @@
 - `supabase/schema.sql`: Cơ sở dữ liệu và chính sách truy cập RLS.
 - `docs/DEPLOY.md`: Hướng dẫn xuất bản, quản trị và kiểm thử.
 
+## Bảo vệ đăng ký và đăng nhập bằng Cloudflare Turnstile
+
+- Đã tích hợp widget Turnstile và `captchaToken` vào Supabase Auth cho đăng nhập, đăng ký và gửi lại email xác minh.
+- Mặc định **chưa bật** để giữ hoạt động đăng nhập khi chưa có Cloudflare Site Key và Supabase Auth Secret Key.
+- [Cách kích hoạt an toàn trên GitHub Pages](docs/CLOUDFLARE-TURNSTILE-V2.1.md) — không đưa secret key vào repository.
+- Bộ lọc/tạo tin, nộp hồ sơ vẫn có PostgreSQL rate limit; Turnstile server-side ở hai luồng ghi là giai đoạn kế tiếp.
+
 ## Thông báo tự động (triển khai bảo mật, chờ kích hoạt nhà cung cấp)
 
 - Ứng viên có thể chủ động đăng ký/bỏ đăng ký email tại `#alerts`; thông báo Web Push chỉ được bật khi có khóa công khai và người dùng cấp quyền.

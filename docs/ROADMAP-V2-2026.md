@@ -31,7 +31,9 @@ Cập nhật: **02/11/2026**. Nền tảng hiện tại: [GitHub Pages](https://
 
 ## v2.3 — Chống spam, quyền truy cập và tin cậy
 
-- [ ] Turnstile/CAPTCHA phù hợp GitHub Pages + Supabase, có xác minh phía máy chủ; không chỉ kiểm tra ở trình duyệt.
+- [x] Bổ sung frontend Turnstile cho đăng nhập/đăng ký/gửi lại xác minh, truyền `captchaToken` đến Supabase Auth để hệ thống xác minh ở server sau khi kích hoạt provider. **Mặc định chưa bật** vì chưa cấu hình Site Key/Secret Key.
+- [ ] Kích hoạt Cloudflare widget và Supabase Auth CAPTCHA bằng Site Key/Secret Key thật; kiểm thử sign-in/sign-up và token hết hạn trên thiết bị thật.
+- [ ] Tăng cường Turnstile Siteverify phía máy chủ cho API tạo hồ sơ ứng tuyển và đăng tin, đồng thời ngăn truy cập insert trực tiếp để tránh vượt CAPTCHA bằng REST.
 - [x] Giới hạn tần suất ở tầng PostgreSQL: 15 đơn/30 phút/ứng viên và 50 tin/24h/doanh nghiệp, có advisory lock và kiểm thử rollback.
 - [ ] Cần xác minh CAPTCHA/Turnstile phía máy chủ và bảo vệ đăng ký Auth trước bot, kết hợp giám sát/giới hạn IP.
 - [ ] Giải quyết Security Advisor `Leaked Password Protection Disabled` theo tính năng/gói Supabase thực tế.

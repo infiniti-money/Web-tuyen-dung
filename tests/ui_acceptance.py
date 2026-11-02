@@ -323,6 +323,80 @@ def test_privacy_rights_mobile(browser):
             assert not errors,errors
         finally:context.close()
 
+
+# Browser-only simulation. Does not use real Cloudflare keys or Supabase Auth accounts.
+AUTH_CAPTCHA_MOCK = r"""
+export function createClient() {
+  return {auth:{
+    getUser:async()=>({data:{user:null},error:null}),
+    signInWithPassword:async payload=>{
+      (window.__authCalls??=[]).push({kind:"login",payload});
+      return {data:{user:null},error:null};
+    },
+    signUp:async payload=>{
+      (window.__authCalls??=[]).push({kind:"register",payload});
+      return {data:{user:null},error:null};
+    },
+    resend:async payload=>{
+      (window.__authCalls??=[]).push({kind:"resend",payload});
+      return {data:{},error:null};
+    }
+  }};
+}
+"""
+FAKE_TURNSTILE = r"""
+window.__captchaReset = 0;
+window.turnstile = {
+ render(holder,settings) {
+  const btn=document.createElement('button');
+  btn.type='button'; btn.className='fake-captcha-verify';
+  btn.textContent='Verify mock challenge';
+  btn.addEventListener('click',()=>settings.callback('mock-browser-challenge-token'));
+  holder.append(btn);
+  return holder;
+ },
+ reset(widget) {window.__captchaReset++;},
+ remove() {}
+};
+"""
+
+def test_turnstile_auth_verification_mock(browser):
+    context=browser.new_context(viewport={"width":390,"height":844},
+                                is_mobile=True,has_touch=True)
+    page=context.new_page()
+    errors=[]
+    page.on("pageerror",lambda err:errors.append(str(err)))
+    page.route("**/config.turnstile.js",lambda route:route.fulfill(
+      status=200,content_type="text/javascript",
+      body="window.HYJOBS_TURNSTILE = {enabled:true,siteKey:'public-qa-site-key-123'};"))
+    page.route("**/challenges.cloudflare.com/turnstile/v0/api.js*",
+      lambda route:route.fulfill(status=200,content_type="text/javascript",
+        headers={"access-control-allow-origin":"*"},body=FAKE_TURNSTILE))
+    page.route("**/esm.sh/@supabase/supabase-js@2.75.0*",
+      lambda route:route.fulfill(status=200,content_type="text/javascript",
+        headers={"access-control-allow-origin":"*"},body=AUTH_CAPTCHA_MOCK))
+    try:
+        page.goto(BASE+"?qa_turnstile=1#account",wait_until="domcontentloaded",timeout=65000)
+        wait_ready(page,"#login .fake-captcha-verify")
+        assert page.locator("#register .fake-captcha-verify").count()==1
+        assert page.locator("#resendConfirmation .fake-captcha-verify").count()==1
+        page.locator("#login input[name=email]").fill("qa@example.invalid")
+        page.locator("#login input[name=password]").fill("safe-password-123")
+        page.locator("#login button").last.click()
+        assert "cần hoàn thành xác minh" in page.locator("#alert").inner_text().lower()
+        assert page.evaluate("window.__authCalls?.length || 0")==0
+        page.locator("#login .fake-captcha-verify").click()
+        page.locator("#login button").last.click()
+        page.wait_for_function("window.__authCalls?.length===1",timeout=15000)
+        calls=page.evaluate("window.__authCalls")
+        assert calls[0]["kind"]=="login"
+        assert calls[0]["payload"]["options"]["captchaToken"]=="mock-browser-challenge-token"
+        assert page.evaluate("window.__captchaReset")>=1
+        no_horizontal_overflow(page)
+        page.screenshot(path=str(ARTIFACTS/"turnstile-auth-mobile-mocked.png"),full_page=True)
+        assert not errors,errors
+    finally:context.close()
+
 def main():
     with sync_playwright() as p:
         browser=p.chromium.launch(headless=True,args=["--no-sandbox"])
@@ -345,6 +419,8 @@ def main():
                   lambda:test_candidate_alert_and_cv_routes_mock(browser))
             check("Privacy notice, own requests, Admin review — phone viewport",
                   lambda:test_privacy_rights_mobile(browser))
+            check("Turnstile Auth rejects absent token and forwards solved token (mock)",
+                  lambda:test_turnstile_auth_verification_mock(browser))
         finally:
             browser.close()
     (ARTIFACTS/"results.json").write_text(
