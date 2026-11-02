@@ -38,7 +38,10 @@ async function syncSavedAccount(){
   syncedAccount=user.id;
 }
 function note(x){let n=q('#alert');n.textContent=x;n.classList.add('show');setTimeout(()=>n.classList.remove('show'),4500)}
-function fail(err){if(err)note(err.message||String(err))}
+function fail(err){if(!err)return;const msg=err.message||String(err);
+ if(msg.includes('Application rate limit: try again later'))note('Bạn đã gửi nhiều hồ sơ trong thời gian ngắn. Vui lòng thử lại sau 30 phút.');
+ else if(msg.includes('Job posting rate limit: contact administrator'))note('Doanh nghiệp đã đạt giới hạn đăng tin trong 24 giờ. Hãy liên hệ quản trị viên.');
+ else note(msg)}
 async function request(p){const {data,error}=await p;if(error)throw error;return data}
 async function session(){const {data}=await db.auth.getUser();user=data?.user||null;profile=user?await request(db.from('profiles').select('*').eq('id',user.id).single()):null;q('#accountLink').textContent=user?'Tài khoản':'Đăng nhập';q('#logoutBtn').classList.toggle('hidden',!user);await syncSavedAccount()}
 async function navigate(p){page=p;document.querySelectorAll('.nav-link').forEach(a=>{let active=a.dataset.page===p||((p.startsWith('job/')||p.startsWith('company/'))&&a.dataset.page==='jobs');a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});if(!db){root.innerHTML='<div class="panel"><h1>Chưa kết nối cơ sở dữ liệu</h1><p>Kiểm tra cấu hình Supabase publishable key của website.</p></div>';return}try{await session();if(p==='jobs')await jobs();else if(p==='saved')await marketplace.saved();else if(p==='alerts')await accountFeatures.alerts();else if(p==='cv')await accountFeatures.cv();else if(p==='privacy')privacyFeatures.privacy();else if(p==='data-rights')await privacyFeatures.requests();else if(p==='admin-rights')await privacyFeatures.adminQueue();else if(p==='account')await account();else if(p==='dashboard')await dashboard();else if(/^job\/[0-9a-f-]{36}$/i.test(p))await marketplace.jobDetail(p.slice(4));else if(/^company\/[0-9a-f-]{36}$/i.test(p))await marketplace.companyProfile(p.slice(8));else await jobs()}catch(ex){fail(ex);root.innerHTML='<div class="panel">Không thể tải dữ liệu. Vui lòng kiểm tra kết nối và cấu hình.</div>'}}

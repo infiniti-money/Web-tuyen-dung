@@ -277,3 +277,22 @@ test('account-data download fetches only user-owned data and never signs CV URLs
  assert.match(privacy,/URL\.createObjectURL/);
  assert.doesNotMatch(privacy,/createSignedUrl/);
 });
+
+
+test('database rate controls guard applications and employer job creation',()=>{
+ const sql=read('supabase/migrations/20261102002025_v21_application_and_job_rate_limits.sql');
+ assert.match(sql,/create trigger limit_candidate_application_frequency/);
+ assert.match(sql,/create trigger limit_employer_job_frequency/);
+ assert.match(sql,/pg_advisory_xact_lock/);
+ assert.match(sql,/recent>=15/);
+ assert.match(sql,/30 minutes/);
+ assert.match(sql,/recent>=50/);
+ assert.match(sql,/24 hours/);
+ assert.match(sql,/app_private\.is_candidate\(\)/);
+ assert.match(sql,/app_private\.is_employer\(\)/);
+ assert.match(sql,/revoke all on function public\.enforce_candidate_apply_rate/);
+ assert.match(sql,/revoke all on function public\.enforce_employer_job_rate/);
+ const app=read('src/app.js');
+ assert.match(app,/Bạn đã gửi nhiều hồ sơ trong thời gian ngắn/);
+ assert.match(app,/đã đạt giới hạn đăng tin trong 24 giờ/);
+});
