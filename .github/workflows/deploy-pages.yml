@@ -22,6 +22,7 @@ jobs:
           node --check src/bookmarks.js
           node --check src/account-features.js
           node --check src/push-notifications.js
+          node --check src/pdf-safety.js
           node --check sw.js
       - name: Automated smoke tests and privacy checks
         run: |

@@ -29,7 +29,7 @@ test('production artifact excludes source, database and workflow files',()=>{
  execFileSync('node',['scripts/build-pages.mjs'],{stdio:'pipe'});
  const top=readdirSync('dist').sort();
  assert.deepEqual(top,['.nojekyll','app.html','config.notifications.js','config.public.js','index.html','manifest.webmanifest','src','sw.js']);
- assert.deepEqual(readdirSync('dist/src'),['account-features.js','app.css','app.js','bookmarks.js','marketplace.js','push-notifications.js']);
+ assert.deepEqual(readdirSync('dist/src'),['account-features.js','app.css','app.js','bookmarks.js','marketplace.js','pdf-safety.js','push-notifications.js']);
  assert.ok(!existsSync('dist/supabase/schema.sql'));
 });
 
@@ -220,4 +220,26 @@ test('all dispatched messages are opted in, deduplicated and secret protected',(
  assert.match(migration,/revoke all on public\.job_notification_deliveries from public,anon,authenticated/);
  assert.match(workflow,/HYJOBS_ALERT_DISPATCH_ENABLED/);
  assert.match(workflow,/HYJOBS_ALERT_JOB_SECRET/);
+});
+
+test('PDF preflight accepts a real PDF signature and rejects mislabeled uploads',async()=>{
+ const {validateCvPdf,MAX_CV_BYTES}=await import('../src/pdf-safety.js');
+ const file=(bytes,contentType='application/pdf',name='test.pdf')=>
+   Object.assign(new Blob([bytes],{type:contentType}),{name});
+ await assert.doesNotReject(validateCvPdf(file('%PDF-1.7\n1 0 obj\n')));
+ await assert.doesNotReject(validateCvPdf(file('%PDF-2.0\n', '', 'candidate.PDF')));
+ await assert.rejects(validateCvPdf(file('not a PDF')),/chữ ký PDF/);
+ await assert.rejects(validateCvPdf(file('%PDF-1.7','image/png')),/Chỉ cho phép/);
+ await assert.rejects(validateCvPdf(file('%PDF-1.7','application/pdf','resume.exe')),/\.pdf/);
+ await assert.rejects(validateCvPdf(file('')),/phải có nội dung/);
+ await assert.rejects(validateCvPdf(file(new Uint8Array(MAX_CV_BYTES+1))),/5 MB/);
+});
+test('both CV upload entrypoints validate PDF content before writing to private storage',()=>{
+ const app=read('src/app.js'),features=read('src/account-features.js');
+ for(const [code,context] of [[app,'async function apply(jobId)'],[features,"root.querySelector('#cvLibraryForm').onsubmit"]]){
+   const start=code.indexOf(context);
+   const validation=code.indexOf('await validateCvPdf(',start);
+   const upload=code.indexOf("db.storage.from('candidate-cvs').upload(",start);
+   assert.ok(start>=0&&validation>start&&upload>validation,'PDF validation before upload: '+context);
+ }
 });
