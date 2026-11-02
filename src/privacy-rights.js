@@ -13,8 +13,8 @@ export function createPrivacyFeatures({db,root,request,e,heading,note,getUser,ge
   root.innerHTML=heading('Quyền riêng tư','Thông tin xử lý dữ liệu cá nhân','Bản mô tả thông tin để người dùng hiểu dữ liệu được sử dụng như thế nào.')+
    '<div class="panel privacy-article">'+
    '<p class="privacy-pending"><strong>Thông báo:</strong> Đây là bản thông tin đang được hoàn thiện và chờ đơn vị vận hành rà soát pháp lý. Chưa phải xác nhận tuân thủ đầy đủ pháp luật hay cam kết về thời hạn lưu trữ.</p>'+
-   '<h2>1. Dữ liệu website tiếp nhận</h2><p>Tùy vai trò, Hưng Yên Jobs tiếp nhận thông tin tài khoản (email, tên, số điện thoại nếu cung cấp), thông tin nhà tuyển dụng và tin tuyển dụng, thư ứng tuyển, trạng thái xét tuyển, tệp CV PDF, dữ liệu tin đã lưu và lựa chọn thông báo việc làm.</p>'+
-   '<h2>2. Mục đích sử dụng</h2><p>Vận hành tài khoản, kết nối Ứng viên với Nhà tuyển dụng, chuyển hồ sơ đã nộp đến doanh nghiệp đăng tin, xét duyệt nội dung và bảo vệ hệ thống. Email/Web Push việc làm phù hợp chỉ được gửi nếu bạn đã chủ động chọn đăng ký nhận tin và hệ thống đã kích hoạt nhà cung cấp.</p>'+
+   '<h2>1. Dữ liệu website tiếp nhận</h2><p>Tùy vai trò, Hưng Yên Jobs tiếp nhận thông tin tài khoản (email đã xác thực, tên, số điện thoại và ngày sinh nếu bạn tự nguyện cung cấp), thông tin nhà tuyển dụng và tin tuyển dụng, thư ứng tuyển, trạng thái xét tuyển, tệp CV PDF, dữ liệu tin đã lưu và lựa chọn thông báo việc làm.</p>'+
+   '<h2>2. Mục đích sử dụng</h2><p>Vận hành tài khoản, xác minh danh tính liên hệ; ngày sinh chỉ để hoàn thiện hồ sơ cá nhân và không tự động công khai, kết nối Ứng viên với Nhà tuyển dụng, chuyển hồ sơ đã nộp đến doanh nghiệp đăng tin, xét duyệt nội dung và bảo vệ hệ thống. Email/Web Push việc làm phù hợp chỉ được gửi nếu bạn đã chủ động chọn đăng ký nhận tin và hệ thống đã kích hoạt nhà cung cấp.</p>'+
    '<h2>3. Ai có thể xem dữ liệu?</h2><p>Ứng viên được xem thông tin hồ sơ của mình. Nhà tuyển dụng được xem hồ sơ ứng tuyển vào các tin thuộc doanh nghiệp mà họ quản lý. Quản trị viên được cấp quyền phù hợp để kiểm duyệt và hỗ trợ. CV được lưu trong Supabase Storage không công khai; các liên kết xem CV có giới hạn thời gian.</p>'+
    '<h2>4. Nơi xử lý và các dịch vụ</h2><p>Giao diện được phân phối qua GitHub Pages; dữ liệu tài khoản, đơn ứng tuyển, tin tuyển dụng và CV được xử lý tại Supabase. Có thể có dịch vụ gửi thư hoặc Web Push khi được cấu hình. Cần hoàn thiện đánh giá phạm vi xử lý, vị trí lưu trữ và việc chuyển dữ liệu trước khi công bố bản chính thức.</p>'+
    '<h2>5. Quyền truy cập, chỉnh sửa và yêu cầu xóa</h2><p>Bạn có thể xem và cập nhật một phần thông tin trong tài khoản, xem CV cá nhân, rút lựa chọn nhận thông báo và gửi yêu cầu truy cập, điều chỉnh, hạn chế hoặc xóa dữ liệu. Yêu cầu xóa được nhân sự quản trị xem xét; hệ thống không tự xóa CV đang gắn với đơn ứng tuyển và không cam kết xóa tự động ngay sau khi gửi.</p>'+
@@ -52,7 +52,7 @@ export function createPrivacyFeatures({db,root,request,e,heading,note,getUser,ge
     const button=ev.currentTarget;button.disabled=true;
     try{
       const [profile,applications,cvs,savedJobs,preferences,companies,myRequests]=await Promise.all([
-        request(db.from('profiles').select('id,full_name,phone,role,created_at').eq('id',user.id).single()),
+        request(db.from('profiles').select('id,full_name,phone,birth_date,role,created_at').eq('id',user.id).single()),
         request(db.from('applications').select('id,job_id,cover_letter,status,created_at,cv_path').eq('candidate_id',user.id).limit(1000)),
         request(db.from('candidate_documents').select('id,original_name,file_size,created_at').eq('user_id',user.id).limit(1000)),
         request(db.from('saved_jobs').select('job_id,created_at').eq('user_id',user.id).limit(1000)),
@@ -62,7 +62,7 @@ export function createPrivacyFeatures({db,root,request,e,heading,note,getUser,ge
       ]);
       const companyIds=companies.map(c=>c.id);
       const ownedJobs=companyIds.length?await request(db.from('jobs').select('id,company_id,title,description,requirements,location,industry,salary_min,salary_max,status,created_at').in('company_id',companyIds).limit(1000)):[];
-      const result={exported_at:new Date().toISOString(),profile,applications,candidate_documents:cvs,saved_jobs:savedJobs,
+      const result={exported_at:new Date().toISOString(),email:user.email||null,profile,applications,candidate_documents:cvs,saved_jobs:savedJobs,
         job_alert_preferences:preferences,companies,owned_jobs:ownedJobs,data_rights_requests:myRequests,
         explanation:'Bản xuất nhanh dữ liệu ứng dụng đang được quyền xem (tối đa 1000 bản ghi mỗi nhóm). Không có mật khẩu hoặc nội dung PDF; nếu cần bản đầy đủ hãy gửi yêu cầu quyền truy cập.'};
       const url=URL.createObjectURL(new Blob([JSON.stringify(result,null,2)],{type:'application/json'}));
