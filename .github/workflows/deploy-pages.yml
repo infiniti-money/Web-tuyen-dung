@@ -26,6 +26,7 @@ jobs:
           node --check src/privacy-rights.js
           node --check src/turnstile-auth.js
           node --check src/google-auth.js
+          node --check src/profile-contact.js
           node --check sw.js
       - name: Automated smoke tests and privacy checks
         run: |
