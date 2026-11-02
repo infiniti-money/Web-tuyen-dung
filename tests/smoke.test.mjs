@@ -421,8 +421,9 @@ test('deletion resolution requires prior review, four attestations, and a detail
 test('database trigger blocks premature deletion resolution without touching CV records',()=>{
  const sql=read('supabase/migrations/20261102211000_v21_deletion_review_resolution_gate.sql');
  assert.match(sql,/old\.request_type='deletion'/);
- assert.match(sql,/old\.status <> 'in_review'/);
+ assert.match(sql,/old\.status not in \('in_review','resolved'\)/);
  assert.match(sql,/char_length\(btrim\(new\.admin_response\)\) < 80/);
+ assert.doesNotMatch(sql,/old\.status is distinct from 'resolved'/);
  assert.match(sql,/before update on public\.data_rights_requests/);
  assert.doesNotMatch(sql,/delete from|drop table|truncate /i);
 });
