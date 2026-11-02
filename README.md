@@ -3,7 +3,7 @@
 **Phiên bản chính thức:** v2.0.0 · GitHub Pages + Supabase PostgreSQL, Auth, Storage và RLS  
 **Supabase project:** `hung-yen-jobs` · Singapore · `lxarzbxymgjomsztftqj`
 
-[**Ghi chú phát hành v2.0.0**](docs/releases/v2.0.0.md) · [**Website đang chạy**](https://infiniti-money.github.io/Web-tuyen-dung/app.html) · [**Lộ trình v2.1–v2.5**](docs/ROADMAP-V2-2026.md)
+[**Ghi chú phát hành v2.0.0**](docs/releases/v2.0.0.md) · [**Website đang chạy**](https://infiniti-money.github.io/Web-tuyen-dung/app.html) · [**Lộ trình v2.1–v2.5**](docs/ROADMAP-V2-2026.md) · [**Quyền riêng tư & SOP khôi phục**](docs/OPERATIONS-DATA-PROTECTION.md)
 
 ## Giao diện
 
