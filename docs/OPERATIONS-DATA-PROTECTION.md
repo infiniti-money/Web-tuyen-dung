@@ -29,6 +29,8 @@ Giao diện `app.html#privacy` cung cấp **thông tin xử lý dữ liệu bả
 4. **Bắt buộc** xác nhận phương án sao lưu và kết quả thử phục hồi trên môi trường tách biệt trước khi xóa bất kỳ dữ liệu production nào. Lập biên bản hành động được người có quyền phê duyệt.
 5. Thao tác xóa phù hợp phạm vi được duyệt, đối soát tệp và metadata sau xóa. Supabase Storage không hỗ trợ khôi phục file đã xóa bằng cách rollback giao dịch PostgreSQL.
 6. Trả lời người dùng rõ dữ liệu nào đã xử lý, dữ liệu nào chưa thể xóa và lý do; không đánh dấu `resolved` khi chưa thực hiện xong. Không tạo nội dung phản hồi có CV, token hoặc dữ liệu của bên thứ ba.
+
+   **Cổng xác nhận v2.1 (bổ sung):** đối với yêu cầu `deletion`, chuyển từ `pending` sang `in_review` trước khi có thể chọn `resolved`. Admin phải xác nhận bốn nội dung trong giao diện: xác minh người yêu cầu; kiểm tra quan hệ `applications`/`candidate_documents`/`storage.objects`; phê duyệt và bằng chứng sao lưu/khôi phục nếu có xóa; đối soát kết quả và trả lời. Phản hồi `resolved` phải dài tối thiểu 80 ký tự, giải thích dữ liệu đã xử lý và dữ liệu chưa thể xóa. PostgreSQL chặn chuyển thẳng `pending → resolved` và phản hồi quá ngắn kể cả khi gọi API trực tiếp. Các ô tích **chỉ là xác nhận thủ công**, không chứng minh rằng dữ liệu đã được xóa và không thay thế kiểm tra thực tế. Migration: `20261102211000_v21_deletion_review_resolution_gate.sql`.
 7. Thực hiện kiểm tra hậu xử lý bằng `supabase/audits/production-integrity.sql` (chỉ trả về số lượng, không chứa thông tin cá nhân).
 
 ## 4. Sao lưu phục hồi — SOP bắt buộc
