@@ -29,7 +29,7 @@ test('production artifact excludes source, database and workflow files',()=>{
  execFileSync('node',['scripts/build-pages.mjs'],{stdio:'pipe'});
  const top=readdirSync('dist').sort();
  assert.deepEqual(top,['.nojekyll','app.html','config.google.js','config.notifications.js','config.public.js','config.turnstile.js','index.html','manifest.webmanifest','src','sw.js']);
- assert.deepEqual(readdirSync('dist/src'),['account-features.js','app.css','app.js','bookmarks.js','google-auth.js','marketplace.js','pdf-safety.js','privacy-rights.js','push-notifications.js','turnstile-auth.js']);
+ assert.deepEqual(readdirSync('dist/src'),['account-features.js','app.css','app.js','bookmarks.js','google-auth.js','marketplace.js','pdf-safety.js','privacy-rights.js','profile-contact.js','push-notifications.js','turnstile-auth.js']);
  assert.ok(!existsSync('dist/supabase/schema.sql'));
 });
 
@@ -331,9 +331,9 @@ test('Cloudflare Turnstile captcha tokens are present on all Supabase Auth entry
  assert.ok(!read('config.turnstile.js').includes('sk-'));
 });
 
-test('Google OAuth is staged off until provider is configured and never exposes client secret',async()=>{
+test('Google OAuth is enabled after provider configuration and never exposes client secret',async()=>{
  const config=read('config.google.js'),app=read('src/app.js'),shell=read('app.html');
- assert.match(config,/enabled:\s*false/);
+ assert.match(config,/enabled:\s*true/);
  assert.match(shell,/src="\.\/config\.google\.js"/);
  assert.match(app,/id="googleLogin"/);
  assert.match(app,/Đăng nhập bằng Google/);
@@ -359,4 +359,44 @@ test('Google OAuth redirects to a clean GitHub Pages URL without leaking query/f
  await assert.rejects(
    google.signIn({auth:{signInWithOAuth:async()=>({data:null,error:new Error('provider_not_enabled')})}},location),
    /provider_not_enabled/);
+});
+
+test('contact fields normalize valid phone/date and reject invalid values',async()=>{
+ const {normalizePhone,normalizeBirthDate,validateContactProfile}=await import('../src/profile-contact.js');
+ assert.equal(normalizePhone(' 0912 345 678 '),'0912345678');
+ assert.equal(normalizePhone('+84 912-345-678'),'+84912345678');
+ assert.equal(normalizePhone(''),null);
+ assert.throws(()=>normalizePhone('123abc'),/Số điện thoại/);
+ assert.equal(normalizeBirthDate('2000-02-29',new Date('2026-11-02T00:00:00Z')),'2000-02-29');
+ assert.throws(()=>normalizeBirthDate('2001-02-29',new Date('2026-11-02T00:00:00Z')),/không hợp lệ/);
+ assert.throws(()=>normalizeBirthDate('1899-12-31',new Date('2026-11-02T00:00:00Z')),/1900/);
+ assert.throws(()=>normalizeBirthDate('2030-01-01',new Date('2026-11-02T00:00:00Z')),/hiện tại/);
+ assert.deepEqual(validateContactProfile({full_name:'  Nguyễn An ',phone:'',birth_date:''},new Date('2026-11-02T00:00:00Z')),
+   {full_name:'Nguyễn An',phone:null,birth_date:null});
+});
+test('account and registration collect optional private phone and DOB with verified Auth email',()=>{
+ const app=read('src/app.js');
+ for(const id of ['accountEmail','profilePhone','profileBirthDate','updateProfile','googleLogin'])
+   assert.ok(app.includes('id="'+id+'"'),id);
+ assert.match(app,/id="accountEmail" type="email"[^>]+readonly/);
+ assert.match(app,/user\.email\|\|''/);
+ assert.match(app,/name="phone" type="tel"/);
+ assert.match(app,/name="birth_date" type="date"/);
+ assert.match(app,/validateContactProfile\(\{full_name:f\.get\('name'\),phone:f\.get\('phone'\),birth_date:f\.get\('birth_date'\)\}\)/);
+ assert.match(app,/\.update\(changes\)\.eq\('id',user\.id\)\.select\('id,full_name,phone,birth_date'\)\.single\(\)/);
+ const privacy=read('src/privacy-rights.js');
+ assert.match(privacy,/phone,birth_date,role/);
+ assert.match(privacy,/email:user\.email\|\|null/);
+});
+test('SQL migrations keep contact details owner-scoped and prevent privilege escalation',()=>{
+ const schema=read('supabase/migrations/20261102134549_v21_google_contact_birth_date.sql');
+ const grant=read('supabase/migrations/20261102135014_v21_profile_contact_column_write_grant.sql');
+ assert.match(schema,/add column if not exists birth_date date/);
+ assert.match(schema,/profiles_birth_date_reasonable/);
+ assert.match(schema,/profiles_phone_format/);
+ assert.match(schema,/when new\.raw_user_meta_data->>'requested_role'='employer' then 'employer' else 'candidate'/);
+ assert.match(grant,/grant update\(full_name,phone,birth_date\)/);
+ assert.doesNotMatch(grant,/grant update\(role/);
+ const app=read('src/app.js');
+ assert.doesNotMatch(app,/\.update\(\{role:/);
 });
