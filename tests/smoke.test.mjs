@@ -297,11 +297,11 @@ test('database rate controls guard applications and employer job creation',()=>{
  assert.match(app,/đã đạt giới hạn đăng tin trong 24 giờ/);
 });
 
-test('auth Turnstile is staged off until Supabase dashboard verification is configured',async()=>{
+test('Turnstile is enabled when Supabase Auth requires CAPTCHA and uses a public Site Key',async()=>{
  const config=read('config.turnstile.js');
  const shell=read('app.html');
- assert.match(config,/enabled:\s*false/);
- assert.match(config,/siteKey:\s*''/);
+ assert.match(config,/enabled:\s*true/);
+ assert.match(config,/siteKey:\s*'0x[A-Za-z0-9]+'/);
  assert.match(shell,/src="\.\/config\.turnstile\.js"/);
  assert.ok(shell.indexOf('config.turnstile.js')<shell.indexOf('src/app.js'));
  const {createAuthTurnstile}=await import('../src/turnstile-auth.js');
