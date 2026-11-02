@@ -24,6 +24,7 @@ jobs:
           node --check src/push-notifications.js
           node --check src/pdf-safety.js
           node --check src/privacy-rights.js
+          node --check src/turnstile-auth.js
           node --check sw.js
       - name: Automated smoke tests and privacy checks
         run: |
