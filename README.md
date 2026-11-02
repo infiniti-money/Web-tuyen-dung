@@ -14,18 +14,26 @@
 - `supabase/schema.sql`: Cơ sở dữ liệu và chính sách truy cập RLS.
 - `docs/DEPLOY.md`: Hướng dẫn xuất bản, quản trị và kiểm thử.
 
-## Đăng nhập bằng Google OAuth (cấu hình chờ kích hoạt)
+## Đăng nhập bằng Google OAuth (đã bật nút Google)
 
 - Giao diện `#account` có nút **Đăng nhập bằng Google**, kết nối qua `supabase.auth.signInWithOAuth`. Quay lại chính xác trang `app.html` sau khi Google xác minh.
 - Giữ nguyên phương thức đăng nhập email/mật khẩu, Cloudflare Turnstile, phân quyền và dữ liệu CV.
-- Công tắc `config.google.js` mặc định **tắt** cho đến khi cấu hình Google Cloud **OAuth Client ID/Secret** trong Supabase Auth Provider và URL cho phép. Không đưa Client Secret lên trang tĩnh.
+- Theo xác nhận của người vận hành đã cấu hình Google Cloud và Supabase, công tắc `config.google.js` đã bật. **Chưa kết luận đăng nhập Google thực tế thành công** trước khi kiểm thử bằng tài khoản thật. Client Secret chỉ lưu trong Google/Supabase.
 - Đăng nhập Google mới mặc định được cấp vai trò **Ứng viên**; không tự cấp vai trò Nhà tuyển dụng hoặc Admin.
 - [Hướng dẫn Google Cloud → Supabase → GitHub Pages và kiểm thử](docs/GOOGLE-LOGIN-V2.1.md).
+
+## Hồ sơ cá nhân — email, số điện thoại và ngày sinh
+
+- Email lấy trực tiếp từ tài khoản đăng nhập Supabase Auth, hiển thị chỉ đọc, không lưu bản sao vào bảng profiles.
+- Số điện thoại và ngày sinh là **thông tin tự nguyện**, có thể nhập khi đăng ký bằng email hoặc cập nhật tại `#account` sau đăng nhập Google/email.
+- Supabase `profiles.birth_date` là cột riêng tư; cập nhật chỉ cho phép các cột `full_name,phone,birth_date` với RLS theo chính chủ, không sửa quyền Admin/Nhà tuyển dụng.
+- Thông tin này không tự hiển thị trên tin tuyển dụng hoặc trang doanh nghiệp và không tự gửi cho nhà tuyển dụng. Người dùng có thể xóa nội dung đã cung cấp.
+- Kiểm thử SQL chủ sở hữu, chặn tài khoản khác và ngày sinh không hợp lệ đã chạy trong giao dịch rollback.
 
 ## Bảo vệ đăng ký và đăng nhập bằng Cloudflare Turnstile
 
 - Đã tích hợp widget Turnstile và `captchaToken` vào Supabase Auth cho đăng nhập, đăng ký và gửi lại email xác minh.
-- Mặc định **chưa bật** để giữ hoạt động đăng nhập khi chưa có Cloudflare Site Key và Supabase Auth Secret Key.
+- Turnstile hiện **đã bật** trên website bằng Site Key công khai; xác minh CAPTCHA phía Supabase phụ thuộc Secret Key người vận hành đã cấu hình.
 - [Cách kích hoạt an toàn trên GitHub Pages](docs/CLOUDFLARE-TURNSTILE-V2.1.md) — không đưa secret key vào repository.
 - Bộ lọc/tạo tin, nộp hồ sơ vẫn có PostgreSQL rate limit; Turnstile server-side ở hai luồng ghi là giai đoạn kế tiếp.
 
