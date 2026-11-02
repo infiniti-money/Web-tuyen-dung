@@ -6,8 +6,8 @@ returns trigger language plpgsql set search_path=public,pg_temp as $$
 begin
   if old.request_type='deletion'
      and new.status='resolved'
-     and old.status is distinct from 'resolved' then
-    if old.status <> 'in_review' then
+     then
+    if old.status not in ('in_review','resolved') then
       raise exception using errcode='23514',
         message='Review deletion request before marking it resolved';
     end if;
