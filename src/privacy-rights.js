@@ -51,15 +51,20 @@ export function createPrivacyFeatures({db,root,request,e,heading,note,getUser,ge
   root.querySelector('#exportMyData').onclick=async ev=>{
     const button=ev.currentTarget;button.disabled=true;
     try{
-      const [profile,applications,cvs,savedJobs,preferences]=await Promise.all([
+      const [profile,applications,cvs,savedJobs,preferences,companies,myRequests]=await Promise.all([
         request(db.from('profiles').select('id,full_name,phone,role,created_at').eq('id',user.id).single()),
         request(db.from('applications').select('id,job_id,cover_letter,status,created_at,cv_path').eq('candidate_id',user.id).limit(1000)),
         request(db.from('candidate_documents').select('id,original_name,file_size,created_at').eq('user_id',user.id).limit(1000)),
         request(db.from('saved_jobs').select('job_id,created_at').eq('user_id',user.id).limit(1000)),
-        request(db.from('job_alert_preferences').select('enabled,keyword,location,industry,min_salary,email_opt_in,push_opt_in,updated_at').eq('user_id',user.id).limit(1))
+        request(db.from('job_alert_preferences').select('enabled,keyword,location,industry,min_salary,email_opt_in,push_opt_in,updated_at').eq('user_id',user.id).limit(1)),
+        request(db.from('companies').select('id,name,description,location,status,industry,website,company_size,founded_year,benefits,created_at').eq('owner_id',user.id).limit(1000)),
+        request(db.from('data_rights_requests').select('id,request_type,details,status,admin_response,created_at,reviewed_at').eq('user_id',user.id).limit(1000))
       ]);
-      const result={exported_at:new Date().toISOString(),profile,applications,candidate_documents:cvs,saved_jobs:savedJobs,job_alert_preferences:preferences,
-        explanation:'Bản sao dữ liệu của tài khoản. Không bao gồm mật khẩu và nội dung PDF. Các CV đang được lưu riêng trong thư viện.'};
+      const companyIds=companies.map(c=>c.id);
+      const ownedJobs=companyIds.length?await request(db.from('jobs').select('id,company_id,title,description,requirements,location,industry,salary_min,salary_max,status,created_at').in('company_id',companyIds).limit(1000)):[];
+      const result={exported_at:new Date().toISOString(),profile,applications,candidate_documents:cvs,saved_jobs:savedJobs,
+        job_alert_preferences:preferences,companies,owned_jobs:ownedJobs,data_rights_requests:myRequests,
+        explanation:'Bản xuất nhanh dữ liệu ứng dụng đang được quyền xem (tối đa 1000 bản ghi mỗi nhóm). Không có mật khẩu hoặc nội dung PDF; nếu cần bản đầy đủ hãy gửi yêu cầu quyền truy cập.'};
       const url=URL.createObjectURL(new Blob([JSON.stringify(result,null,2)],{type:'application/json'}));
       try{
         const a=document.createElement('a');a.href=url;a.download='hung-yen-jobs-du-lieu-cua-toi.json';
