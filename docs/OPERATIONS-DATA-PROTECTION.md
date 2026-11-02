@@ -54,6 +54,14 @@ Giao diện `app.html#privacy` cung cấp **thông tin xử lý dữ liệu bả
 - Định kỳ kiểm tra object không có application/document và ứng dụng tham chiếu thiếu file (script audit). Không tự xóa những file được đánh dấu "unused" khi chưa có quyết định hợp lệ.
 - Email/Push vẫn khóa nếu chưa xác minh nhà cung cấp và có đồng ý.
 
+## 6. Giới hạn tần suất bổ sung (v2.1)
+
+- Ứng viên được phép gửi tối đa **15 hồ sơ trong 30 phút**, Nhà tuyển dụng tối đa **50 tin/24 giờ** theo công ty (trên dữ liệu mới).
+- Hai trigger PostgreSQL kiểm tra theo tài khoản/công ty, dùng khóa giao dịch `pg_advisory_xact_lock` để tránh hai yêu cầu đồng thời cùng vượt giới hạn.
+- Đã thử 15/16 lượt ứng tuyển và 50/51 lượt đăng tin trong transaction `BEGIN/ROLLBACK`. Đơn thứ 16 và tin thứ 51 bị từ chối; dữ liệu kiểm thử không lưu lại.
+- Đây là giới hạn ở tầng **ứng dụng sau đăng nhập**, không thay thế Turnstile/CAPTCHA có xác minh server, bảo vệ endpoint đăng ký Auth, email throttling, abuse detection theo IP và giám sát đăng nhập. Các hạng mục này còn cần cấu hình và kiểm thử riêng.
+- Khi Nhà tuyển dụng cần đăng hàng loạt hợp lệ, phải có quy trình xác thực Admin và thay đổi giới hạn có kiểm soát thay vì tắt bảo vệ.
+
 ## 6. Biên bản nghiệm thu thương mại
 
 Phải có chữ ký/phê duyệt của người vận hành cho chính sách quyền riêng tư; thử quy trình nhận và giải quyết yêu cầu của tài khoản thật; chứng nhận test backup và restore; kiểm thử quyền chéo, bảo mật CV, chống lạm dụng Auth/Job/Application và kiểm thử iPhone/Android thực tế. Tính năng email/Push gửi thật là một cổng kích hoạt riêng, không được xem là đã hoạt động nếu chưa có cấu hình.
