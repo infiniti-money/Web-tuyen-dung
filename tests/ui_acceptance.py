@@ -279,6 +279,17 @@ def test_candidate_alert_and_cv_routes_mock(browser):
         assert "CV của tôi" in page.locator("#root").inner_text()
         no_horizontal_overflow(page)
         page.screenshot(path=str(ARTIFACTS/"cv-library-mobile-mocked.png"),full_page=True)
+        page.goto(BASE+"?qa_candidate=1#account",wait_until="domcontentloaded",timeout=65000)
+        wait_ready(page,"#profilePhone")
+        assert page.locator("#accountEmail").is_visible()
+        assert page.locator("#accountEmail").get_attribute("readonly") is not None
+        assert page.locator("#profileBirthDate").get_attribute("type")=="date"
+        assert page.locator("#profilePhone").get_attribute("type")=="tel"
+        page.locator("#profilePhone").fill("not-a-number")
+        page.locator("#updateProfile").click()
+        assert "Số điện thoại" in page.locator("#alert").inner_text()
+        no_horizontal_overflow(page)
+        page.screenshot(path=str(ARTIFACTS/"candidate-contact-profile-mobile-mocked.png"),full_page=True)
         assert not errors,errors
     finally:context.close()
 

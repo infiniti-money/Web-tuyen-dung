@@ -86,8 +86,8 @@ window.HYJOBS_GOOGLE_AUTH = { enabled: true };
 
 **Rollback an toàn:** đặt `enabled:false` trong `config.google.js` và triển khai lại GitHub Pages. Email/password vẫn hoạt động, CV và đơn ứng tuyển không bị động đến.
 
-## Tình trạng hiện tại
+## Tình trạng hiện tại (02/11/2026)
 
-- Code UI/OAuth, docs và tests đã có.
-- **Chưa cấu hình Client ID/Secret trong Supabase bằng công cụ này** và chưa xác nhận luồng Google thật; không được gọi là Google login đã kích hoạt thành công cho người dùng cuối.
-- Cần người có quyền Google Cloud/Supabase điền credentials bí mật trong Dashboard, sau đó bật công tắc công khai, nghiệm thu tài khoản thực tế.
+- Người vận hành đã xác nhận **Google OAuth được cấu hình trong Google Cloud và Supabase**. Site code đã bật `enabled:true` để hiển thị nút Google và khởi động OAuth.
+- Đã bổ sung thông tin cá nhân **email xác thực (chỉ đọc), số điện thoại, ngày sinh** trong màn hình tài khoản sau đăng nhập; hai trường sau tự nguyện và riêng tư.
+- CI và thử nghiệm trình duyệt mô phỏng không thay thế **đăng nhập Google thật**. Cần người vận hành kiểm tra trên máy tính/iPhone, ghi nhận bảo toàn vai trò và dữ liệu.

@@ -472,3 +472,8 @@ tr[hidden]{display:none!important}
 .google-mark{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;border-radius:50%;background:#fff;border:1px solid #d2e0ea;color:#4285f4;font-family:Arial,sans-serif;font-size:17px;font-weight:800}
 #googleLoginStatus{font-size:11px;line-height:1.7;margin:9px 0 0;color:#678197}
 @media(max-width:700px){.google-signin{min-height:48px}}
+
+/* Profile contact fields: sensitive information visible only in signed-in account UI. */
+#accountEmail[readonly]{background:#f4f7fa;border-color:#d5e2ec;color:#4f697d;cursor:not-allowed}
+#profilePhone,#profileBirthDate{max-width:100%;min-width:0}
+.account-layout .small-note{line-height:1.65}
