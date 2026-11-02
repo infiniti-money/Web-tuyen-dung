@@ -456,3 +456,8 @@ tr[hidden]{display:none!important}
  .privacy-actions .button,.privacy-actions button{width:100%;text-align:center}
  .rights-item{padding:14px}
 }
+
+/* Cloudflare Turnstile — auth controls stay readable at 320px mobile. */
+.auth-turnstile{margin:13px 0 4px;max-width:100%;min-height:64px;overflow:hidden}
+.captcha-status{margin:6px 0 14px;color:#55788c;font-size:11px;line-height:1.6}
+@media(max-width:360px){.auth-turnstile{transform-origin:top left;max-width:100%}.auth-layout>.panel{min-width:0}}
