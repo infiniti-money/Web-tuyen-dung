@@ -303,9 +303,10 @@ def test_privacy_rights_mobile(browser):
         page=context.new_page()
         errors=[]
         page.on("pageerror",lambda ex:errors.append(str(ex)))
-        page.route("**/esm.sh/@supabase/supabase-js@2.75.0*",
-          lambda route,body=stub:route.fulfill(status=200,content_type="text/javascript",
-            headers={"access-control-allow-origin":"*"},body=body))
+        def serve_test_supabase(route):
+            route.fulfill(status=200,content_type="text/javascript",
+                headers={"access-control-allow-origin":"*"},body=stub)
+        page.route("**/esm.sh/@supabase/supabase-js@2.75.0*",serve_test_supabase)
         try:
             page.goto(BASE+("#data-rights" if role=="candidate" else "#admin-rights"),
                       wait_until="domcontentloaded",timeout=65000)
