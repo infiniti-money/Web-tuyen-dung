@@ -28,8 +28,8 @@ test('RLS, scoped employer access and private storage configured',()=>{
 test('production artifact excludes source, database and workflow files',()=>{
  execFileSync('node',['scripts/build-pages.mjs'],{stdio:'pipe'});
  const top=readdirSync('dist').sort();
- assert.deepEqual(top,['.nojekyll','app.html','config.notifications.js','config.public.js','index.html','manifest.webmanifest','src','sw.js']);
- assert.deepEqual(readdirSync('dist/src'),['account-features.js','app.css','app.js','bookmarks.js','marketplace.js','pdf-safety.js','privacy-rights.js','push-notifications.js']);
+ assert.deepEqual(top,['.nojekyll','app.html','config.notifications.js','config.public.js','config.turnstile.js','index.html','manifest.webmanifest','src','sw.js']);
+ assert.deepEqual(readdirSync('dist/src'),['account-features.js','app.css','app.js','bookmarks.js','marketplace.js','pdf-safety.js','privacy-rights.js','push-notifications.js','turnstile-auth.js']);
  assert.ok(!existsSync('dist/supabase/schema.sql'));
 });
 
@@ -295,4 +295,38 @@ test('database rate controls guard applications and employer job creation',()=>{
  const app=read('src/app.js');
  assert.match(app,/Bạn đã gửi nhiều hồ sơ trong thời gian ngắn/);
  assert.match(app,/đã đạt giới hạn đăng tin trong 24 giờ/);
+});
+
+test('auth Turnstile is staged off until Supabase dashboard verification is configured',async()=>{
+ const config=read('config.turnstile.js');
+ const shell=read('app.html');
+ assert.match(config,/enabled:\s*false/);
+ assert.match(config,/siteKey:\s*''/);
+ assert.match(shell,/src="\.\/config\.turnstile\.js"/);
+ assert.ok(shell.indexOf('config.turnstile.js')<shell.indexOf('src/app.js'));
+ const {createAuthTurnstile}=await import('../src/turnstile-auth.js');
+ const legacy=createAuthTurnstile({enabled:false});
+ assert.deepEqual(legacy.authOptions('login'),{});
+ assert.equal(legacy.required(),false);
+ const pending=createAuthTurnstile({enabled:true,siteKey:'example-public-site-key-123'});
+ assert.equal(pending.required(),true);
+ assert.throws(()=>pending.authOptions('login'),/hoàn thành xác minh/);
+ const broken=createAuthTurnstile({enabled:true,siteKey:''});
+ assert.throws(()=>broken.authOptions('register'),/chưa được cấu hình/);
+});
+test('Cloudflare Turnstile captcha tokens are present on all Supabase Auth entrypoints',()=>{
+ const app=read('src/app.js'),module=read('src/turnstile-auth.js');
+ assert.match(app,/authOptions\('login'\)/);
+ assert.match(app,/authOptions\('register'\)/);
+ assert.match(app,/authOptions\('resendConfirmation'\)/);
+ for(const id of ['login','register','resendConfirmation']){
+  assert.match(app,new RegExp("captcha\\.reset\\('"+id+"'\\)"));
+ }
+ assert.match(app,/captcha\.mount\(\['login','register','resendConfirmation'\]\)/);
+ assert.match(module,/https:\/\/challenges.cloudflare.com\/turnstile\/v0\/api\.js\?render=explicit/);
+ assert.match(module,/expired-callback/);
+ assert.match(module,/error-callback/);
+ assert.match(module,/captchaToken:token/);
+ assert.ok(!module.includes('TURNSTILE_SECRET'));
+ assert.ok(!read('config.turnstile.js').includes('sk-'));
 });
