@@ -8,6 +8,18 @@ const TYPES={
  other:'Yêu cầu khác'
 };
 const STATUS={pending:'Đã tiếp nhận',in_review:'Đang xem xét',resolved:'Đã xử lý',rejected:'Không thể chấp thuận'};
+// UI preflight only: a checked box is an admin attestation, not proof of data deletion.
+export const DELETION_CHECKS=Object.freeze(['verify_identity','review_dependencies','verify_backup','verify_outcome']);
+export function validateDeletionResolution({requestType,previousStatus,nextStatus,adminResponse,acknowledgements=[]}){
+ if(requestType!=='deletion'||nextStatus!=='resolved')return null;
+ if(previousStatus!=='in_review'&&previousStatus!=='resolved')
+  return 'Cần chuyển yêu cầu xóa sang Đang xem xét trước khi đánh dấu Đã xử lý.';
+ if(DELETION_CHECKS.some(name=>!acknowledgements.includes(name)))
+  return 'Cần xác nhận đủ bốn bước xử lý, kiểm tra liên kết CV và bản sao lưu.';
+ if(String(adminResponse||'').trim().length<80)
+  return 'Phản hồi hoàn tất yêu cầu xóa cần tối thiểu 80 ký tự, nêu rõ kết quả đã xử lý và dữ liệu còn lưu.';
+ return null;
+}
 export function createPrivacyFeatures({db,root,request,e,heading,note,getUser,getRole}){
  function privacy(){
   root.innerHTML=heading('Quyền riêng tư','Thông tin xử lý dữ liệu cá nhân','Bản mô tả thông tin để người dùng hiểu dữ liệu được sử dụng như thế nào.')+
@@ -127,18 +139,11 @@ export function createPrivacyFeatures({db,root,request,e,heading,note,getUser,ge
       if(['resolved','rejected'].includes(status)&&admin_response.length<10){
         note('Cần phản hồi cụ thể trước khi kết thúc yêu cầu');return;
       }
-      if(item.request_type==='deletion'&&status==='resolved'){
-        if(item.status!=='in_review'&&item.status!=='resolved'){
-          note('Cần chuyển yêu cầu xóa sang Đang xem xét trước khi đánh dấu Đã xử lý.');return;
-        }
-        const checks=['verify_identity','review_dependencies','verify_backup','verify_outcome'];
-        if(checks.some(name=>!data.has(name))){
-          note('Cần xác nhận đủ bốn bước xử lý, kiểm tra liên kết CV và bản sao lưu.');return;
-        }
-        if(admin_response.length<80){
-          note('Phản hồi hoàn tất yêu cầu xóa cần tối thiểu 80 ký tự, nêu rõ kết quả đã xử lý và dữ liệu còn lưu.');return;
-        }
-      }
+      const deletionError=validateDeletionResolution({
+        requestType:item.request_type,previousStatus:item.status,nextStatus:status,
+        adminResponse:admin_response,acknowledgements:DELETION_CHECKS.filter(name=>data.has(name))
+      });
+      if(deletionError){note(deletionError);return;}
       const button=form.querySelector('button');button.disabled=true;
       try{
         await request(db.from('data_rights_requests').update({status,admin_response})
