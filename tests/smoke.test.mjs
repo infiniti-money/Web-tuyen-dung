@@ -28,8 +28,8 @@ test('RLS, scoped employer access and private storage configured',()=>{
 test('production artifact excludes source, database and workflow files',()=>{
  execFileSync('node',['scripts/build-pages.mjs'],{stdio:'pipe'});
  const top=readdirSync('dist').sort();
- assert.deepEqual(top,['.nojekyll','app.html','config.notifications.js','config.public.js','config.turnstile.js','index.html','manifest.webmanifest','src','sw.js']);
- assert.deepEqual(readdirSync('dist/src'),['account-features.js','app.css','app.js','bookmarks.js','marketplace.js','pdf-safety.js','privacy-rights.js','push-notifications.js','turnstile-auth.js']);
+ assert.deepEqual(top,['.nojekyll','app.html','config.google.js','config.notifications.js','config.public.js','config.turnstile.js','index.html','manifest.webmanifest','src','sw.js']);
+ assert.deepEqual(readdirSync('dist/src'),['account-features.js','app.css','app.js','bookmarks.js','google-auth.js','marketplace.js','pdf-safety.js','privacy-rights.js','push-notifications.js','turnstile-auth.js']);
  assert.ok(!existsSync('dist/supabase/schema.sql'));
 });
 
@@ -329,4 +329,34 @@ test('Cloudflare Turnstile captcha tokens are present on all Supabase Auth entry
  assert.match(module,/captchaToken:token/);
  assert.ok(!module.includes('TURNSTILE_SECRET'));
  assert.ok(!read('config.turnstile.js').includes('sk-'));
+});
+
+test('Google OAuth is staged off until provider is configured and never exposes client secret',async()=>{
+ const config=read('config.google.js'),app=read('src/app.js'),shell=read('app.html');
+ assert.match(config,/enabled:\s*false/);
+ assert.match(shell,/src="\.\/config\.google\.js"/);
+ assert.match(app,/id="googleLogin"/);
+ assert.match(app,/Đăng nhập bằng Google/);
+ assert.match(app,/createGoogleSignIn\(\)/);
+ for(const file of [config,read('src/google-auth.js')]){
+  assert.doesNotMatch(file,/GOOGLE_CLIENT_SECRET|GOTRUE_EXTERNAL_GOOGLE_SECRET|client_secret:/);
+ }
+ const {createGoogleSignIn}=await import('../src/google-auth.js');
+ const off=createGoogleSignIn({enabled:false});
+ await assert.rejects(off.signIn({auth:{signInWithOAuth:()=>{throw Error('Must never call OAuth while disabled')}}}),/chưa được kích hoạt/);
+});
+test('Google OAuth redirects to a clean GitHub Pages URL without leaking query/fragment',async()=>{
+ const {createGoogleSignIn}=await import('../src/google-auth.js');
+ const google=createGoogleSignIn({enabled:true});
+ const location={origin:'https://infiniti-money.github.io',pathname:'/Web-tuyen-dung/app.html',
+   search:'?email=test@example.com',hash:'#access_token=never-leak-this'};
+ const calls=[];
+ await google.signIn({auth:{signInWithOAuth:async input=>{
+   calls.push(input);return {data:{url:'https://accounts.google.com/test'},error:null};
+ }}},location);
+ assert.deepEqual(calls,[{provider:'google',options:{
+   redirectTo:'https://infiniti-money.github.io/Web-tuyen-dung/app.html'}}]);
+ await assert.rejects(
+   google.signIn({auth:{signInWithOAuth:async()=>({data:null,error:new Error('provider_not_enabled')})}},location),
+   /provider_not_enabled/);
 });
