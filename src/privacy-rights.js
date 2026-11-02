@@ -34,6 +34,7 @@ export function createPrivacyFeatures({db,root,request,e,heading,note,getUser,ge
     .eq('user_id',user.id).order('created_at',{ascending:false}).limit(50));
   root.innerHTML=heading('Bảo vệ thông tin','Yêu cầu về dữ liệu cá nhân','Chỉ tài khoản của bạn và quản trị viên được phân quyền mới xem được nội dung yêu cầu.')+
    '<div class="panel"><h2>Gửi yêu cầu</h2><p class="muted">Không nhập mật khẩu, mã đăng nhập hoặc nội dung CV vào ô mô tả. Chúng tôi sẽ xem xét yêu cầu qua tài khoản đã xác minh; đây không phải chức năng xóa tự động.</p>'+
+   '<div class="privacy-actions"><button id="exportMyData" class="secondary" type="button">Tải bản sao thông tin tài khoản (JSON)</button><a href="#privacy">Xem thông tin xử lý dữ liệu</a></div><p class="small-note">Tệp xuất chỉ bao gồm dữ liệu ứng dụng và tên CV, không gồm nội dung PDF. Bạn có thể xem CV riêng trong thư viện.</p>'+ 
    '<form id="dataRightsForm"><label for="rightsKind">Loại yêu cầu</label><select id="rightsKind" name="kind" required>'+
    Object.entries(TYPES).map(([k,v])=>'<option value="'+k+'">'+e(v)+'</option>').join('')+'</select>'+
    '<label for="rightsDetails">Mô tả ngắn (không bắt buộc)</label><textarea id="rightsDetails" name="details" maxlength="1500" placeholder="Ví dụ: Tôi muốn xem dữ liệu hồ sơ đã gửi..."></textarea>'+
@@ -47,6 +48,26 @@ export function createPrivacyFeatures({db,root,request,e,heading,note,getUser,ge
     '</article>').join('')+'</div>':
     '<div class="empty-state"><strong>Chưa có yêu cầu nào</strong><p>Bạn có thể gửi yêu cầu trực tiếp bằng biểu mẫu phía trên.</p></div>')+
    '</section><p class="small-note">Xem thêm <a href="#privacy">thông tin xử lý dữ liệu cá nhân</a>.</p>';
+  root.querySelector('#exportMyData').onclick=async ev=>{
+    const button=ev.currentTarget;button.disabled=true;
+    try{
+      const [profile,applications,cvs,savedJobs,preferences]=await Promise.all([
+        request(db.from('profiles').select('id,full_name,phone,role,created_at').eq('id',user.id).single()),
+        request(db.from('applications').select('id,job_id,cover_letter,status,created_at,cv_path').eq('candidate_id',user.id).limit(1000)),
+        request(db.from('candidate_documents').select('id,original_name,file_size,created_at').eq('user_id',user.id).limit(1000)),
+        request(db.from('saved_jobs').select('job_id,created_at').eq('user_id',user.id).limit(1000)),
+        request(db.from('job_alert_preferences').select('enabled,keyword,location,industry,min_salary,email_opt_in,push_opt_in,updated_at').eq('user_id',user.id).limit(1))
+      ]);
+      const result={exported_at:new Date().toISOString(),profile,applications,candidate_documents:cvs,saved_jobs:savedJobs,job_alert_preferences:preferences,
+        explanation:'Bản sao dữ liệu của tài khoản. Không bao gồm mật khẩu và nội dung PDF. Các CV đang được lưu riêng trong thư viện.'};
+      const url=URL.createObjectURL(new Blob([JSON.stringify(result,null,2)],{type:'application/json'}));
+      try{
+        const a=document.createElement('a');a.href=url;a.download='hung-yen-jobs-du-lieu-cua-toi.json';
+        document.body.append(a);a.click();a.remove();
+      }finally{setTimeout(()=>URL.revokeObjectURL(url),30000)}
+      note('Đã tạo tệp sao lưu thông tin tài khoản. Hãy giữ tệp ở nơi riêng tư.');
+    }catch(error){note(error.message||'Không thể tải bản sao dữ liệu')}finally{button.disabled=false}
+  };
   root.querySelector('#dataRightsForm').onsubmit=async ev=>{
     ev.preventDefault();
     const btn=ev.currentTarget.querySelector('button'),data=new FormData(ev.currentTarget);
