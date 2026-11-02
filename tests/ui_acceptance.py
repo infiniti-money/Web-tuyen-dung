@@ -282,6 +282,47 @@ def test_candidate_alert_and_cv_routes_mock(browser):
         assert not errors,errors
     finally:context.close()
 
+
+def test_privacy_rights_mobile(browser):
+    # Public notice uses the actual site. Account-role views are safely mocked.
+    public=browser.new_page(viewport={"width":390,"height":844})
+    try:
+        public.goto(BASE+"#privacy",wait_until="domcontentloaded",timeout=65000)
+        wait_ready(public,".privacy-article")
+        assert "xóa dữ liệu" in public.locator(".privacy-article").inner_text().lower()
+        assert public.locator('a[href="#data-rights"]').count()>=1
+        no_horizontal_overflow(public)
+        public.screenshot(path=str(ARTIFACTS/"privacy-public-mobile.png"),full_page=True)
+    finally: public.close()
+    for role,stub,selector in [
+        ("candidate",CANDIDATE_MOCK,"#dataRightsForm"),
+        ("admin",ADMIN_MOCK,"#rightsStatusFilter")
+    ]:
+        context=browser.new_context(viewport={"width":390,"height":844},
+                                    is_mobile=True,has_touch=True)
+        page=context.new_page()
+        errors=[]
+        page.on("pageerror",lambda ex:errors.append(str(ex)))
+        def serve_test_supabase(route):
+            route.fulfill(status=200,content_type="text/javascript",
+                headers={"access-control-allow-origin":"*"},body=stub)
+        page.route("**/esm.sh/@supabase/supabase-js@2.75.0*",serve_test_supabase)
+        try:
+            page.goto(BASE+("#data-rights" if role=="candidate" else "#admin-rights"),
+                      wait_until="domcontentloaded",timeout=65000)
+            wait_ready(page,selector)
+            if role=="candidate":
+                assert page.locator("#exportMyData").is_visible()
+                assert page.locator("#rightsKind").count()==1
+                assert "Lịch sử yêu cầu" in page.locator("#root").inner_text()
+            else:
+                assert page.locator("#rightsQueueCount").inner_text().startswith("0 / 0")
+                assert "xóa" in page.locator("#root").inner_text().lower()
+            no_horizontal_overflow(page)
+            page.screenshot(path=str(ARTIFACTS/f"privacy-{role}-mobile-mocked.png"),full_page=True)
+            assert not errors,errors
+        finally:context.close()
+
 def main():
     with sync_playwright() as p:
         browser=p.chromium.launch(headless=True,args=["--no-sandbox"])
@@ -302,6 +343,8 @@ def main():
                   lambda:test_employer_review_filters_mock(browser))
             check("Candidate CV library and job alerts — isolated account mock",
                   lambda:test_candidate_alert_and_cv_routes_mock(browser))
+            check("Privacy notice, own requests, Admin review — phone viewport",
+                  lambda:test_privacy_rights_mobile(browser))
         finally:
             browser.close()
     (ARTIFACTS/"results.json").write_text(

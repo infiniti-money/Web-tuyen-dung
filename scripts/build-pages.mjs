@@ -3,7 +3,7 @@ import {dirname} from 'node:path';
 
 const target='dist';
 rmSync(target,{recursive:true,force:true});
-for(const file of ['index.html','app.html','src/app.js','src/marketplace.js','src/bookmarks.js','src/account-features.js','src/push-notifications.js','src/pdf-safety.js','src/app.css','config.public.js','config.notifications.js','manifest.webmanifest','sw.js']){
+for(const file of ['index.html','app.html','src/app.js','src/marketplace.js','src/bookmarks.js','src/account-features.js','src/push-notifications.js','src/pdf-safety.js','src/privacy-rights.js','src/app.css','config.public.js','config.notifications.js','manifest.webmanifest','sw.js']){
   if(!existsSync(file)) throw Error('Missing production asset: '+file);
   mkdirSync(dirname(target+'/'+file),{recursive:true});
   cpSync(file,target+'/'+file);
@@ -18,4 +18,4 @@ if(readFileSync('app.html','utf8').includes('src="./config.js"'))throw Error('ap
 if(!readFileSync('app.html','utf8').includes('src="./config.public.js"'))throw Error('app.html must load public config');
 if(!readFileSync('app.html','utf8').includes('href="./src/app.css"'))throw Error('app.html must load responsive stylesheet');
 writeFileSync(target+'/.nojekyll','');
-console.log('Built GitHub Pages site with only 13 public assets. No database migrations or private files published.');
+console.log('Built GitHub Pages site with only 14 public assets. No database migrations or private files published.');

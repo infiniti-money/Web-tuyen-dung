@@ -29,7 +29,7 @@ test('production artifact excludes source, database and workflow files',()=>{
  execFileSync('node',['scripts/build-pages.mjs'],{stdio:'pipe'});
  const top=readdirSync('dist').sort();
  assert.deepEqual(top,['.nojekyll','app.html','config.notifications.js','config.public.js','index.html','manifest.webmanifest','src','sw.js']);
- assert.deepEqual(readdirSync('dist/src'),['account-features.js','app.css','app.js','bookmarks.js','marketplace.js','pdf-safety.js','push-notifications.js']);
+ assert.deepEqual(readdirSync('dist/src'),['account-features.js','app.css','app.js','bookmarks.js','marketplace.js','pdf-safety.js','privacy-rights.js','push-notifications.js']);
  assert.ok(!existsSync('dist/supabase/schema.sql'));
 });
 
@@ -242,4 +242,38 @@ test('both CV upload entrypoints validate PDF content before writing to private 
    const upload=code.indexOf("db.storage.from('candidate-cvs').upload(",start);
    assert.ok(start>=0&&validation>start&&upload>validation,'PDF validation before upload: '+context);
  }
+});
+
+test('privacy routes are available in the application and both public website footers',()=>{
+ const main=read('src/app.js'),privacy=read('src/privacy-rights.js');
+ for(const route of ["p==='privacy'","p==='data-rights'","p==='admin-rights'"])assert.ok(main.includes(route),route);
+ assert.match(read('app.html'),/href="#data-rights"/);
+ assert.match(read('app.html'),/href="#privacy"/);
+ assert.match(read('index.html'),/app\.html#privacy/);
+ assert.match(privacy,/Bản mô tả/);
+ assert.match(privacy,/chờ đơn vị vận hành rà soát pháp lý/);
+});
+test('privacy request intake is authenticated, scoped to owner, and never auto-deletes',()=>{
+ const privacy=read('src/privacy-rights.js');
+ const sql=read('supabase/migrations/20261102000500_v21_data_rights_request_intake.sql');
+ assert.match(privacy,/if\(!user\)/);
+ assert.match(privacy,/\.eq\('user_id',user\.id\)/);
+ assert.match(privacy,/\.insert\(\{user_id:user\.id,request_type,details\}\)/);
+ assert.match(privacy,/getRole\(\)!=='admin'/);
+ assert.match(sql,/alter table public\.data_rights_requests enable row level security/);
+ assert.match(sql,/user_id=\(select auth\.uid\(\)\)/);
+ assert.match(sql,/app_private\.is_admin\(\)/);
+ assert.match(sql,/create unique index data_rights_requests_one_active_type/);
+ assert.match(sql,/15 minutes/);
+ assert.match(sql,/revoke all on public\.data_rights_requests from public,anon,authenticated/);
+ assert.doesNotMatch(privacy,/db\.auth\.admin\.deleteUser/);
+ assert.doesNotMatch(privacy,/storage\.from\('candidate-cvs'\)\.remove/);
+});
+test('account-data download fetches only user-owned data and never signs CV URLs',()=>{
+ const privacy=read('src/privacy-rights.js');
+ assert.match(privacy,/data\.get\('kind'\)/);
+ for(const table of ['profiles','applications','candidate_documents','saved_jobs','job_alert_preferences'])assert.ok(privacy.includes("'"+table+"'"),table);
+ assert.match(privacy,/data-rights/);
+ assert.match(privacy,/URL\.createObjectURL/);
+ assert.doesNotMatch(privacy,/createSignedUrl/);
 });

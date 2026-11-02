@@ -429,3 +429,30 @@ tr[hidden]{display:none!important}
 .push-opt-in .inline-actions{justify-content:flex-start;gap:10px}
 .push-opt-in button{font-size:12px}
 @media(max-width:700px){.push-opt-in .inline-actions{display:flex;flex-wrap:wrap}.opt-in-field small{line-height:1.6}}
+
+
+/* Privacy rights intake — content-first, accessible on mobile and desktop. */
+.privacy-article{max-width:920px;line-height:1.9}
+.privacy-article h2{font-size:17px;margin:23px 0 9px;color:var(--heading)}
+.privacy-article p{font-size:13px;line-height:1.85;color:#4e6b82}
+.privacy-pending{border:1px solid #efd39a;background:#fff9ec;padding:14px 18px;border-radius:12px}
+.privacy-article .privacy-pending{color:#755227}
+.privacy-actions{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin:19px 0}
+.privacy-actions a,.privacy-actions button{font-size:12px}
+.rights-list{display:grid;gap:14px}
+.rights-item{border:1px solid #dce8f1;background:#fafcff;border-radius:15px;padding:18px;overflow-wrap:anywhere;margin:12px 0}
+.rights-item .rights-top{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.rights-item .rights-top strong{font-size:13px;color:var(--heading)}
+.rights-item p{font-size:12px;line-height:1.8}
+.rights-response{background:#edf7f5;padding:12px 15px;border-radius:11px}
+.rights-review{display:grid;gap:12px;max-width:650px;margin-top:18px;padding-top:14px;border-top:1px solid #dce8f1}
+.rights-review select,.rights-review textarea{margin:0}
+.rights-review textarea{min-height:80px}
+.rights-review button{justify-self:start}
+@media(max-width:700px){
+ .privacy-article{padding:20px}
+ .privacy-article h2{font-size:15px}
+ .privacy-actions{align-items:stretch;flex-direction:column}
+ .privacy-actions .button,.privacy-actions button{width:100%;text-align:center}
+ .rights-item{padding:14px}
+}
