@@ -23,6 +23,7 @@ jobs:
           node --check src/pdf-safety.js
           node --check src/privacy-rights.js
           node --check src/turnstile-auth.js
+          node --check src/google-auth.js
           node --check sw.js
           node --check scripts/build-pages.mjs
           node --test tests/smoke.test.mjs

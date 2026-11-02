@@ -397,6 +397,45 @@ def test_turnstile_auth_verification_mock(browser):
         assert not errors,errors
     finally:context.close()
 
+
+GOOGLE_AUTH_MOCK = r"""
+export function createClient(){
+ return {auth:{
+  getUser:async()=>({data:{user:null},error:null}),
+  signInWithOAuth:async payload=>{
+    window.__googleOAuthCalls??=[];
+    window.__googleOAuthCalls.push(payload);
+    return {data:{url:'https://accounts.google.com/mock-consent'},error:null};
+  }
+ }};
+}
+"""
+
+def test_google_auth_mobile_mock(browser):
+    context=browser.new_context(viewport={"width":390,"height":844},is_mobile=True,has_touch=True)
+    page=context.new_page()
+    errors=[]
+    page.on("pageerror",lambda e:errors.append(str(e)))
+    page.route("**/config.google.js",lambda route:route.fulfill(status=200,
+        content_type="text/javascript",body="window.HYJOBS_GOOGLE_AUTH = {enabled:true};"))
+    page.route("**/esm.sh/@supabase/supabase-js@2.75.0*",
+      lambda route:route.fulfill(status=200,content_type="text/javascript",
+        headers={"access-control-allow-origin":"*"},body=GOOGLE_AUTH_MOCK))
+    try:
+        page.goto(BASE+"?qa_google=1#account",wait_until="domcontentloaded",timeout=65000)
+        wait_ready(page,"#googleLogin")
+        assert page.locator("#googleLogin").is_visible()
+        assert page.locator("#login input[type=password]").is_visible()
+        no_horizontal_overflow(page)
+        page.locator("#googleLogin").click()
+        page.wait_for_function("window.__googleOAuthCalls?.length===1",timeout=15000)
+        call=page.evaluate("window.__googleOAuthCalls[0]")
+        assert call["provider"]=="google"
+        assert call["options"]["redirectTo"] == BASE.split("?")[0]
+        page.screenshot(path=str(ARTIFACTS/"google-oauth-mobile-mocked.png"),full_page=True)
+        assert not errors,errors
+    finally:context.close()
+
 def main():
     with sync_playwright() as p:
         browser=p.chromium.launch(headless=True,args=["--no-sandbox"])
@@ -421,6 +460,8 @@ def main():
                   lambda:test_privacy_rights_mobile(browser))
             check("Turnstile Auth rejects absent token and forwards solved token (mock)",
                   lambda:test_turnstile_auth_verification_mock(browser))
+            check("Google OAuth button routes to Supabase on mobile (mock)",
+                  lambda:test_google_auth_mobile_mock(browser))
         finally:
             browser.close()
     (ARTIFACTS/"results.json").write_text(

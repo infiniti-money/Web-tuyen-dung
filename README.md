@@ -14,6 +14,14 @@
 - `supabase/schema.sql`: Cơ sở dữ liệu và chính sách truy cập RLS.
 - `docs/DEPLOY.md`: Hướng dẫn xuất bản, quản trị và kiểm thử.
 
+## Đăng nhập bằng Google OAuth (cấu hình chờ kích hoạt)
+
+- Giao diện `#account` có nút **Đăng nhập bằng Google**, kết nối qua `supabase.auth.signInWithOAuth`. Quay lại chính xác trang `app.html` sau khi Google xác minh.
+- Giữ nguyên phương thức đăng nhập email/mật khẩu, Cloudflare Turnstile, phân quyền và dữ liệu CV.
+- Công tắc `config.google.js` mặc định **tắt** cho đến khi cấu hình Google Cloud **OAuth Client ID/Secret** trong Supabase Auth Provider và URL cho phép. Không đưa Client Secret lên trang tĩnh.
+- Đăng nhập Google mới mặc định được cấp vai trò **Ứng viên**; không tự cấp vai trò Nhà tuyển dụng hoặc Admin.
+- [Hướng dẫn Google Cloud → Supabase → GitHub Pages và kiểm thử](docs/GOOGLE-LOGIN-V2.1.md).
+
 ## Bảo vệ đăng ký và đăng nhập bằng Cloudflare Turnstile
 
 - Đã tích hợp widget Turnstile và `captchaToken` vào Supabase Auth cho đăng nhập, đăng ký và gửi lại email xác minh.
