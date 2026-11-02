@@ -8,6 +8,7 @@ on:
       - 'src/**'
       - 'app.html'
       - 'config.turnstile.js'
+      - 'config.google.js'
   workflow_dispatch:
 permissions:
   contents: read
