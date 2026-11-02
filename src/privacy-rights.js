@@ -110,6 +110,13 @@ export function createPrivacyFeatures({db,root,request,e,heading,note,getUser,ge
        '<form class="rights-review" data-review="'+e(r.id)+'"><label for="rights-'+e(r.id)+'">Trạng thái</label><select id="rights-'+e(r.id)+'" name="status">'+
        Object.entries(STATUS).map(([k,v])=>'<option value="'+k+'"'+(r.status===k?' selected':'')+'>'+e(v)+'</option>').join('')+'</select>'+
        '<label>Phản hồi đến người yêu cầu</label><textarea name="response" maxlength="1500">'+e(r.admin_response||'')+'</textarea>'+
+       (r.request_type==='deletion'?'<fieldset class="rights-deletion-check"><legend>Chỉ xác nhận hoàn tất khi đã xử lý dữ liệu</legend>'+
+       '<p class="small-note">Trước khi chọn Đã xử lý, phải chuyển qua Đang xem xét và xác nhận đủ các kiểm tra dưới đây. Đánh dấu ô không thực hiện thao tác xóa dữ liệu.</p>'+
+       '<label><input type="checkbox" name="verify_identity"> Đã xác minh tài khoản và phạm vi yêu cầu</label>'+
+       '<label><input type="checkbox" name="review_dependencies"> Đã đối chiếu đơn ứng tuyển, CV thư viện và các liên kết Storage</label>'+
+       '<label><input type="checkbox" name="verify_backup"> Đã xác minh phê duyệt, sao lưu và phương án khôi phục nếu có xóa</label>'+
+       '<label><input type="checkbox" name="verify_outcome"> Đã thực hiện và đối soát kết quả; phản hồi giải thích dữ liệu đã xử lý/chưa thể xóa</label>'+
+       '</fieldset>':'')+
        '<button type="submit">Lưu phản hồi</button></form></article>').join(''):
        '<div class="empty-state"><strong>Không có yêu cầu phù hợp</strong></div>';
     list.querySelectorAll('[data-review]').forEach(form=>form.onsubmit=async ev=>{
@@ -119,6 +126,18 @@ export function createPrivacyFeatures({db,root,request,e,heading,note,getUser,ge
       if(!Object.hasOwn(STATUS,status)){note('Trạng thái không hợp lệ');return}
       if(['resolved','rejected'].includes(status)&&admin_response.length<10){
         note('Cần phản hồi cụ thể trước khi kết thúc yêu cầu');return;
+      }
+      if(item.request_type==='deletion'&&status==='resolved'){
+        if(item.status!=='in_review'&&item.status!=='resolved'){
+          note('Cần chuyển yêu cầu xóa sang Đang xem xét trước khi đánh dấu Đã xử lý.');return;
+        }
+        const checks=['verify_identity','review_dependencies','verify_backup','verify_outcome'];
+        if(checks.some(name=>!data.has(name))){
+          note('Cần xác nhận đủ bốn bước xử lý, kiểm tra liên kết CV và bản sao lưu.');return;
+        }
+        if(admin_response.length<80){
+          note('Phản hồi hoàn tất yêu cầu xóa cần tối thiểu 80 ký tự, nêu rõ kết quả đã xử lý và dữ liệu còn lưu.');return;
+        }
       }
       const button=form.querySelector('button');button.disabled=true;
       try{
