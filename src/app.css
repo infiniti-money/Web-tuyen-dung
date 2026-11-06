@@ -477,3 +477,9 @@ tr[hidden]{display:none!important}
 #accountEmail[readonly]{background:#f4f7fa;border-color:#d5e2ec;color:#4f697d;cursor:not-allowed}
 #profilePhone,#profileBirthDate{max-width:100%;min-width:0}
 .account-layout .small-note{line-height:1.65}
+
+/* Admin privacy review: explicit attestations, never automatic deletion. */
+.rights-deletion-check{min-width:0;display:grid;gap:11px;border:1px solid #d6e4ec;border-radius:12px;padding:13px 15px;background:#f7fafc}
+.rights-deletion-check legend{padding:0 5px;font-weight:700;font-size:13px;color:var(--heading)}
+.rights-deletion-check label{display:flex;align-items:flex-start;gap:9px;font-size:12px;line-height:1.6;margin:0}
+.rights-deletion-check input[type=checkbox]{width:17px;height:17px;min-width:17px;flex:0 0 17px;margin:2px 0 0}

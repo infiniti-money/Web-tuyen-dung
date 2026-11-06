@@ -400,3 +400,30 @@ test('SQL migrations keep contact details owner-scoped and prevent privilege esc
  const app=read('src/app.js');
  assert.doesNotMatch(app,/\.update\(\{role:/);
 });
+
+test('deletion resolution requires prior review, four attestations, and a detailed response',async()=>{
+ const {DELETION_CHECKS,validateDeletionResolution}=await import('../src/privacy-rights.js');
+ const input={requestType:'deletion',previousStatus:'in_review',nextStatus:'resolved',
+   adminResponse:'Đã xác minh và xử lý dữ liệu theo hồ sơ phê duyệt; thông tin cần giữ lại được giải thích cụ thể với người yêu cầu.',
+   acknowledgements:[...DELETION_CHECKS]};
+ assert.equal(DELETION_CHECKS.length,4);
+ assert.equal(validateDeletionResolution(input),null);
+ assert.match(validateDeletionResolution({...input,previousStatus:'pending'}),/Đang xem xét/);
+ assert.match(validateDeletionResolution({...input,acknowledgements:DELETION_CHECKS.slice(1)}),/bốn bước/);
+ assert.match(validateDeletionResolution({...input,adminResponse:'Đã xử lý'}),/80 ký tự/);
+ assert.equal(validateDeletionResolution({...input,requestType:'access'}),null);
+ assert.equal(validateDeletionResolution({...input,nextStatus:'rejected'}),null);
+ const app=read('src/privacy-rights.js');
+ for(const key of DELETION_CHECKS)assert.match(app,new RegExp('name="'+key+'"'));
+ assert.doesNotMatch(app,/db\.auth\.admin\.deleteUser/);
+ assert.doesNotMatch(app,/storage\.from\('candidate-cvs'\)\.remove/);
+});
+test('database trigger blocks premature deletion resolution without touching CV records',()=>{
+ const sql=read('supabase/migrations/20261102211000_v21_deletion_review_resolution_gate.sql');
+ assert.match(sql,/old\.request_type='deletion'/);
+ assert.match(sql,/old\.status not in \('in_review','resolved'\)/);
+ assert.match(sql,/char_length\(btrim\(new\.admin_response\)\) < 80/);
+ assert.doesNotMatch(sql,/old\.status is distinct from 'resolved'/);
+ assert.match(sql,/before update on public\.data_rights_requests/);
+ assert.doesNotMatch(sql,/delete from|drop table|truncate /i);
+});

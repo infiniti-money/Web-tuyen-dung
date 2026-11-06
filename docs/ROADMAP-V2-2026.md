@@ -17,6 +17,7 @@ Cập nhật: **02/11/2026**. Nền tảng hiện tại: [GitHub Pages](https://
 - [x] Kiểm thử file PDF thật/giả, sai phần mở rộng, quá dung lượng bằng smoke test Node.
 - [ ] Công bố thông tin sử dụng dữ liệu cá nhân, thời hạn lưu và kênh nhận yêu cầu xóa có người phụ trách; cần xác nhận email liên hệ chính thức và rà soát chính sách trước khi công bố.
 - [ ] Quy trình xóa theo yêu cầu có kiểm tra liên kết `applications` và Storage, bảo đảm không xóa CV đang được nhà tuyển dụng xem/đang xử lý.
+  - Đã chuẩn bị cổng kiểm soát đóng yêu cầu xóa (bước `in_review`, phản hồi chi tiết, xác nhận thủ công và trigger bảo vệ API). Chưa coi quy trình xóa hoàn tất cho đến khi có backup/restore, xác minh liên kết Storage và nghiệm thu thật.
 - [ ] Kiểm thử riêng file PDF chứa nội dung nguy hiểm và phương án quét trên **máy chủ**. Kiểm tra magic bytes phía client chỉ là một lớp kiểm tra, **không phải** quét virus hoặc bảo đảm toàn vẹn PDF.
 - [ ] Kiểm thử bằng điện thoại iOS/Android và tài khoản thật, có biên bản nghiệm thu.
 
