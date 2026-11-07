@@ -65,3 +65,14 @@ commit;
 - Thiết lập sao lưu, quy trình xóa dữ liệu theo yêu cầu, chính sách quyền riêng tư và chống spam.
 
 **Tình trạng 31/10/2026:** GitHub Pages, Auth/SMTP, Admin phê duyệt, Employer đăng tin, Candidate tải CV PDF thật và Employer mở CV/cập nhật `reviewing` đều đã được kiểm thử. Nghiệp vụ cốt lõi đạt; vẫn cần chính sách dữ liệu, backup/restore, chống spam và nghiệm thu đa thiết bị trước khi mở rộng production. Chi tiết: [QA-ACCEPTANCE.md](QA-ACCEPTANCE.md).
+
+## 7. Cloudflare Worker keepalive cho Supabase Free
+
+Worker `hyjobs-supabase-keepalive` chạy mỗi 6 giờ, đọc tối đa một ID tin đã
+xuất bản bằng publishable key và quyền `anon`/RLS. Worker độc lập với Pages và
+workflow thông báo; không sửa database, Auth, Storage hoặc dữ liệu người dùng.
+
+**Trạng thái 07/11/2026: chưa deploy Cloudflare, cần quyền Workers.** Làm theo
+[hướng dẫn Worker](../cloudflare/supabase-keepalive/README.md) để cấu hình secret,
+deploy mã/lịch, kiểm tra invocation production và lưu bằng chứng. Không tắt
+keepalive GitHub nào trước khi xác nhận Worker production chạy thành công.
