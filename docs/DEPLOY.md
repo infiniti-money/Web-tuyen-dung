@@ -72,7 +72,10 @@ Worker `hyjobs-supabase-keepalive` chạy mỗi 6 giờ, đọc tối đa một 
 xuất bản bằng publishable key và quyền `anon`/RLS. Worker độc lập với Pages và
 workflow thông báo; không sửa database, Auth, Storage hoặc dữ liệu người dùng.
 
-**Trạng thái 07/11/2026: chưa deploy Cloudflare, cần quyền Workers.** Làm theo
+**Trạng thái 07/11/2026: đã deploy và kiểm chứng cron production, HTTP 200.**
+Lịch thử tạm đã được gỡ; Cloudflare API xác nhận chỉ còn `17 */6 * * *`.
+Deployment/version ID, thời điểm và log xác minh nằm trong biên bản ở đầu
+[hướng dẫn Worker](../cloudflare/supabase-keepalive/README.md). Làm theo
 [hướng dẫn Worker](../cloudflare/supabase-keepalive/README.md) để cấu hình secret,
 deploy mã/lịch, kiểm tra invocation production và lưu bằng chứng. Không tắt
 keepalive GitHub nào trước khi xác nhận Worker production chạy thành công.
