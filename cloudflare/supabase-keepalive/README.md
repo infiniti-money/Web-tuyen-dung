@@ -43,12 +43,31 @@ quả, HTTP status, số dòng và lịch chạy; không chứa khóa hoặc n�
 
 ## Trạng thái ngày 07/11/2026
 
-- Mã nguồn, cấu hình, kiểm thử và hướng dẫn deploy được chuẩn bị trong PR.
+- [PR #29](https://github.com/infiniti-money/Web-tuyen-dung/pull/29) đã được
+  hợp nhất vào `main`; Worker đã được triển khai từ commit
+  `e2d7d014bb6b7e154108238910a79781496f1edd`.
 - Supabase được kiểm tra là `ACTIVE_HEALTHY`; `jobs` bật RLS và có quyền SELECT
   cho `anon`. Không thay đổi dữ liệu hoặc quyền truy cập khi kiểm tra.
-- **Chưa deploy lên tài khoản Cloudflare.** `wrangler whoami` báo chưa đăng nhập;
-  phiên làm việc không có Cloudflare API token/account ID. Chưa có deployment ID
-  hoặc bằng chứng production Cron Trigger chạy thành công.
+- **Đã deploy production** lúc **12:29:25 giờ Việt Nam ngày 07/11/2026**
+  (05:29:25 UTC), bằng OAuth Wrangler được chủ tài khoản cấp quyền.
+  Deployment ID: `92c4b873-b907-44bc-a32f-74a66b8436d3`.
+  Version ID: `7a57d4e8-5e15-43d9-ae87-2eb51d432f23`, phục vụ 100% lưu lượng.
+  Secret `SUPABASE_PUBLISHABLE_KEY` đã được tải cùng mã nguồn; Cloudflare xác
+  nhận `workers.dev` và preview URL đều tắt, Observability lấy mẫu 100%.
+  Cron production đã chạy thành công lúc **12:39:02 giờ Việt Nam**
+  (05:39:02 UTC), HTTP 200, outcome `Ok`.
+- Để kiểm chứng sớm, đã thêm lịch thử `* * * * *` bên cạnh lịch 6 giờ.
+  Lượt Cron Trigger thực tế trên Cloudflare ghi log:
+  `event=hyjobs-supabase-keepalive`, `status=ok`, `httpStatus=200`, `rows=1`,
+  `scheduledTime=2026-11-07T05:39:02.756Z`. Không log ID tin hoặc khóa.
+  Lịch thử đã được gỡ ngay sau khi thành công. Kiểm tra lại Cloudflare API lúc
+  **12:39:46 giờ Việt Nam** xác nhận **chỉ còn `17 */6 * * *`**, đúng version
+  triển khai ở trên; HTTP/preview URL vẫn tắt và secret vẫn có kiểu `secret_text`.
+  Một lượt thử khác cũng thành công lúc 05:40:02 UTC trong thời gian thay đổi
+  lịch đang lan truyền; Cloudflare có thể mất đến 15 phút để áp dụng việc gỡ
+  trigger trên toàn mạng. API cấu hình đã không còn lịch mỗi phút.
+  Bằng chứng thực thi này thuộc lịch thử production, không phải quan sát nhiều
+  chu kỳ 6 giờ. Lượt theo lịch chuẩn kế tiếp sau deploy là 13:17 cùng ngày.
 - Kiểm thử giả lập, build dry-run hay SELECT trực tiếp thành công **không phải**
   bằng chứng Cron Trigger production đã hoạt động.
 - Không tắt hoặc sửa lịch keepalive GitHub nào. Trên `main` đã đối chiếu
@@ -65,7 +84,9 @@ Kết quả xác minh trong phiên chuẩn bị PR:
 | Wrangler build/deploy dry-run | Đạt, không upload |
 | SELECT thật bằng publishable key từ Node | HTTP 200, 05:07:02 UTC ngày 07/11/2026 |
 | Scheduled handler trên local Workers runtime | HTTP 200, `status=ok`, 05:10:51 UTC ngày 07/11/2026 |
-| Deploy / Cron Trigger trên Cloudflare production | Chưa thực hiện; thiếu đăng nhập/quyền Cloudflare |
+| Deploy trên Cloudflare production | Đạt, deployment/version ID ghi ở trên |
+| Cron Trigger production bằng lịch thử tạm | Đạt, outcome `Ok`, HTTP 200 lúc 05:39:02 UTC ngày 07/11/2026 |
+| Cấu hình cuối sau khi gỡ lịch thử | Chỉ còn `17 */6 * * *`, Cloudflare API xác nhận lúc 05:39:46 UTC |
 
 Phép thử runtime đã xác nhận dùng `redirect: "manual"` rồi từ chối HTTP 3xx;
 Cloudflare Workers không hỗ trợ `redirect: "error"` như Node. Không chuyển khóa

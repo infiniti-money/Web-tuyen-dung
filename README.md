@@ -96,7 +96,7 @@ Mở [docs/DEPLOY.md](docs/DEPLOY.md) để kích hoạt GitHub Pages, cấu hì
 
 - Worker `hyjobs-supabase-keepalive` chỉ SELECT tối đa một ID tin đã xuất bản bằng publishable key, không đọc hồ sơ/CV hoặc ghi dữ liệu.
 - Cron `17 */6 * * *` (UTC), tương ứng **01:17, 07:17, 13:17, 19:17** giờ Việt Nam.
-- **Chưa deploy Cloudflare**; cần đăng nhập tài khoản có quyền Workers và xác nhận một lần cron production thành công. Giữ nguyên các workflow GitHub hiện có. Lịch này không cam kết chống pause gói Free.
+- **Đã deploy và kiểm chứng cron production ngày 07/11/2026**, HTTP 200. Lịch thử tạm đã được gỡ; hiện chỉ còn lịch 6 giờ. Giữ nguyên các workflow GitHub hiện có. Lịch này không cam kết chống pause gói Free.
 - [Cấu hình, secrets, deploy, kiểm thử và điều kiện chuyển lịch cũ](cloudflare/supabase-keepalive/README.md).
 
 **Không bao giờ** đưa Supabase secret key hay service_role key vào frontend.
