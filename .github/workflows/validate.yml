@@ -27,5 +27,14 @@ jobs:
           node --check src/profile-contact.js
           node --check sw.js
           node --check scripts/build-pages.mjs
+          node --check cloudflare/supabase-keepalive/src/index.mjs
           node --test tests/smoke.test.mjs
+          node --test tests/cloudflare-keepalive.test.mjs
           node scripts/build-pages.mjs
+      - name: Validate cron Worker bundle without deploying or accessing secrets
+        working-directory: cloudflare/supabase-keepalive
+        env:
+          WRANGLER_SEND_METRICS: 'false'
+        run: |
+          npm ci
+          npm run dry-run

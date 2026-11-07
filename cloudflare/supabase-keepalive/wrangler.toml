@@ -1,0 +1,18 @@
+# Standalone cron-only Worker, separate from GitHub Pages and notification delivery.
+name = "hyjobs-supabase-keepalive"
+main = "src/index.mjs"
+compatibility_date = "2026-11-07"
+workers_dev = false
+preview_urls = false
+routes = []
+
+[vars]
+SUPABASE_URL = "https://lxarzbxymgjomsztftqj.supabase.co"
+
+[triggers]
+# UTC 00:17, 06:17, 12:17, 18:17 = UTC+7 01:17, 07:17, 13:17, 19:17.
+crons = ["17 */6 * * *"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1

@@ -1,0 +1,2 @@
+# Copy to .dev.vars for local testing only. Use config.public.js's anonKey value.
+SUPABASE_PUBLISHABLE_KEY="sb_publishable_REPLACE_WITH_PUBLIC_KEY"
